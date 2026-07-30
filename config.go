@@ -16,8 +16,8 @@ type rootEntry struct {
 }
 
 // configPath is the settings file listing which repos/repo-groups to
-// monitor. CCDI_CONFIG overrides it, same envOr pattern as CCDI_ROOT.
-var configPath = envOr("CCDI_CONFIG", filepath.Join(configDir(), "ccdi", "config"))
+// monitor. TABELARADAR_CONFIG overrides it, same envOr pattern as TABELARADAR_ROOT.
+var configPath = envOr("TABELARADAR_CONFIG", filepath.Join(configDir(), "tabelaradar", "config"))
 
 func configDir() string {
 	if dir, err := os.UserConfigDir(); err == nil {
@@ -26,10 +26,10 @@ func configDir() string {
 	return filepath.Join(homeDir, ".config")
 }
 
-// defaultConfig preserves ccdi's original behavior (scan CCDI_ROOT, or
+// defaultConfig preserves tabelaradar's original behavior (scan TABELARADAR_ROOT, or
 // ~/codigo/pessoal if unset) for anyone who hasn't written a config file yet.
 func defaultConfig() []rootEntry {
-	return []rootEntry{{Path: envOr("CCDI_ROOT", filepath.Join(homeDir, "codigo", "pessoal"))}}
+	return []rootEntry{{Path: envOr("TABELARADAR_ROOT", filepath.Join(homeDir, "codigo", "pessoal"))}}
 }
 
 // loadRootsConfig reads configPath, one entry per line:

@@ -67,14 +67,14 @@ func (p Project) toIPC() projectJSON {
 	return out
 }
 
-// runIPC implements `ccdi ipc <método> [key=value...] --json`, the same
+// runIPC implements `tabelaradar ipc <método> [key=value...] --json`, the same
 // scriptable-data-source convention as dcal/djobs (`<bin> ipc <método>
 // --json`) — meant for an LLM (or any script) to ask "what's left to do,
 // where did I stop, what could I pick up next" across every tracked repo
 // without going through the TUI.
 func runIPC(args []string) int {
 	if len(args) == 0 {
-		fmt.Fprintln(os.Stderr, "uso: ccdi ipc <método> [key=value...] --json")
+		fmt.Fprintln(os.Stderr, "uso: tabelaradar ipc <método> [key=value...] --json")
 		return 1
 	}
 
@@ -132,7 +132,7 @@ func ipcProjectsList(projects []Project, filters map[string]string) int {
 	return writeJSON(out)
 }
 
-// ipcProjectsNext returns the single project ccdi itself would put first —
+// ipcProjectsNext returns the single project tabelaradar itself would put first —
 // projects come back from scanAll already ordered mid-flight (dirty) work
 // first, then most recently active, the same priority the TUI's sidebar
 // shows top-to-bottom.
