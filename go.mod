@@ -1,4 +1,4 @@
-module github.com/ianptkcs/ccdi
+module github.com/ianptkcs/tabelaradar
 
 go 1.26.1
 
