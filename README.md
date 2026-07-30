@@ -6,7 +6,7 @@
 não enviados, repos sem remote, projetos parados há tempo demais.
 
 [![Go Version](https://img.shields.io/github/go-mod/go-version/ianptkcs/ccdi?style=flat-square&logo=go&logoColor=white&color=00ADD8)](go.mod)
-[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue?style=flat-square)](LICENSE)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
 [![Built with Bubble Tea](https://img.shields.io/badge/built%20with-Bubble%20Tea-ff69b4?style=flat-square)](https://github.com/charmbracelet/bubbletea)
 
 </div>
@@ -143,6 +143,6 @@ Exemplo:
 
 ## Licença
 
-[PolyForm Noncommercial License 1.0.0](LICENSE) — uso livre pra fins não
-comerciais (estudo, hobby, contribuição). Uso comercial requer permissão
-do autor.
+[GNU AGPL-3.0](LICENSE) — livre e open source. Se você rodar uma versão
+modificada deste projeto, inclusive como serviço de rede, também precisa
+disponibilizar o código-fonte modificado sob a mesma licença.
