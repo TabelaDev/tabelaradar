@@ -1,4 +1,19 @@
-# CCDI
+<div align="center">
+
+# ccdi
+
+**TUI que fiscaliza a saúde git dos seus repositórios locais** — WIP, commits
+não enviados, repos sem remote, projetos parados há tempo demais.
+
+[![Go Version](https://img.shields.io/github/go-mod/go-version/ianptkcs/ccdi?style=flat-square&logo=go&logoColor=white&color=00ADD8)](go.mod)
+[![License: PolyForm Noncommercial](https://img.shields.io/badge/license-PolyForm%20Noncommercial-blue?style=flat-square)](LICENSE)
+[![Built with Bubble Tea](https://img.shields.io/badge/built%20with-Bubble%20Tea-ff69b4?style=flat-square)](https://github.com/charmbracelet/bubbletea)
+
+</div>
+
+---
+
+## O que é
 
 Um [Bubble Tea](https://github.com/charmbracelet/bubbletea) TUI que varre
 os repositórios/pastas-de-repositórios listados nas settings (por padrão só
@@ -13,6 +28,31 @@ seu `README.md`/`PLANNING.md`/`ESCOPO.md`/`STACK.md`/`TODO.md`/`CLAUDE.md`
 (o primeiro que existir), mais os bullets do índice de memória do Claude
 Code daquele projeto (`~/.claude/projects/<slug>/memory/MEMORY.md`), quando
 uma sessão já rodou ali dentro.
+
+## Índice
+
+- [Instalação](#instalação)
+- [Layout](#layout)
+- [Uso](#uso)
+- [IPC](#ipc)
+- [Configuração](#configuração)
+- [Licença](#licença)
+
+## Instalação
+
+Requer Go 1.26+.
+
+```bash
+go install github.com/ianptkcs/ccdi@latest
+```
+
+Ou compilando a partir do source:
+
+```bash
+git clone https://github.com/ianptkcs/ccdi.git
+cd ccdi
+go build -o ccdi .
+```
 
 ## Layout
 
@@ -100,3 +140,9 @@ Exemplo:
   DankMaterialShell não está instalado/configurado (padrão `mauve`).
 - `CCDI_DMS_SETTINGS` — caminho do `settings.json` do DMS, se não for
   o padrão.
+
+## Licença
+
+[PolyForm Noncommercial License 1.0.0](LICENSE) — uso livre pra fins não
+comerciais (estudo, hobby, contribuição). Uso comercial requer permissão
+do autor.
