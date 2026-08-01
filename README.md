@@ -1,13 +1,14 @@
 <div align="center">
 
-# ccdi
+# TabelaRadar
 
 **TUI que fiscaliza a saúde git dos seus repositórios locais** — WIP, commits
 não enviados, repos sem remote, projetos parados há tempo demais.
 
-[![Go Version](https://img.shields.io/github/go-mod/go-version/ianptkcs/ccdi?style=flat-square&logo=go&logoColor=white&color=00ADD8)](go.mod)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/ianptkcs/tabelaradar?style=flat-square&logo=go&logoColor=white&color=00ADD8)](go.mod)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
 [![Built with Bubble Tea](https://img.shields.io/badge/built%20with-Bubble%20Tea-ff69b4?style=flat-square)](https://github.com/charmbracelet/bubbletea)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/ianptkcs)
 
 </div>
 
@@ -43,15 +44,15 @@ uma sessão já rodou ali dentro.
 Requer Go 1.26+.
 
 ```bash
-go install github.com/ianptkcs/ccdi@latest
+go install github.com/ianptkcs/tabelaradar@latest
 ```
 
 Ou compilando a partir do source:
 
 ```bash
-git clone https://github.com/ianptkcs/ccdi.git
-cd ccdi
-go build -o ccdi .
+git clone https://github.com/TabelaDev/tabelaradar.git
+cd tabelaradar
+go build -o tabelaradar .
 ```
 
 ## Layout
@@ -74,8 +75,8 @@ Três painéis:
 ## Uso
 
 ```
-ccdi         # abre a TUI
-ccdi list    # dump em texto plano, sem TTY — útil pra scriptar
+tabelaradar         # abre a TUI
+tabelaradar list    # dump em texto plano, sem TTY — útil pra scriptar
 ```
 
 Dentro da TUI: `↑`/`↓` (ou `j`/`k`) navegam a lista de projetos,
@@ -87,15 +88,15 @@ reescaneia, `q` sai.
 ## IPC
 
 Pra scripts ou pra um LLM perguntar "o que falta fazer, onde eu parei em
-cada projeto, o que dá pra começar a implementar" sem abrir a TUI, `ccdi`
-expõe um subcomando `ipc` não-interativo, no mesmo espírito do `dcal ipc
-<método> --json`/`djobs ipc <método> --json`:
+cada projeto, o que dá pra começar a implementar" sem abrir a TUI,
+`tabelaradar` expõe um subcomando `ipc` não-interativo, no mesmo espírito do
+`dcal ipc <método> --json`/`djobs ipc <método> --json`:
 
 ```bash
-ccdi ipc projects.list --json              # todo projeto trackeado, com status git + descrição + próximos passos
-ccdi ipc projects.list dirty=true --json   # só quem tem mudanças não commitadas
-ccdi ipc projects.list name=ndrc --json    # um projeto específico
-ccdi ipc projects.next --json              # o projeto que a própria ccdi priorizaria (mid-flight > mais recente)
+tabelaradar ipc projects.list --json                  # todo projeto trackeado, com status git + descrição + próximos passos
+tabelaradar ipc projects.list dirty=true --json       # só quem tem mudanças não commitadas
+tabelaradar ipc projects.list name=tabelacal --json   # um projeto específico
+tabelaradar ipc projects.next --json                  # o projeto que o próprio tabelaradar priorizaria (mid-flight > mais recente)
 ```
 
 Cada projeto no JSON traz, além dos campos de status git (branch, sujo,
@@ -110,36 +111,47 @@ uma.
 
 ### Quais repos monitorar
 
-`~/.config/ccdi/config` (padrão do `os.UserConfigDir()`; sobrescrível via
-`CCDI_CONFIG`) lista, uma entrada por linha, o que entra no scan:
+`~/.config/tabelaradar/config` (padrão do `os.UserConfigDir()`; sobrescrível
+via `TABELARADAR_CONFIG`) lista, uma entrada por linha, o que entra no scan:
 
 - um caminho para uma pasta-de-repos: cada subpasta com `.git` vira uma
   linha na tabela (é como `~/codigo/pessoal` funciona hoje);
 - um caminho apontando direto pra um repositório git: ele entra sozinho,
   como uma linha só (útil pra monitorar um repo solto fora das pastas
-  padrão, ex. `~/codigo/cogu`);
+  padrão, ex. `~/codigo/algum-projeto-solto`);
 - `!<caminho>` exclui esse caminho específico — seja uma raiz inteira, seja
   um filho de uma raiz-de-repos citada acima.
 
 Linhas em branco e começando com `#` são ignoradas. Sem esse arquivo, o
-comportamento é o de sempre: varre só `CCDI_ROOT` (ou `~/codigo/pessoal`).
+comportamento é o de sempre: varre só `TABELARADAR_ROOT` (ou `~/codigo/pessoal`).
 
 Exemplo:
 
 ```
 ~/codigo/pessoal
 !~/codigo/pessoal/spotdash
-~/codigo/cogu
+~/codigo/algum-projeto-solto
 ```
 
 ### Outras variáveis
 
-- `CCDI_ROOT` — diretório varrido quando não existe `~/.config/ccdi/config`
-  (padrão `~/codigo/pessoal`).
-- `CCDI_ACCENT` — accent Catppuccin Mocha manual, usado só quando o
+- `TABELARADAR_ROOT` — diretório varrido quando não existe
+  `~/.config/tabelaradar/config` (padrão `~/codigo/pessoal`).
+- `TABELARADAR_ACCENT` — accent Catppuccin Mocha manual, usado só quando o
   DankMaterialShell não está instalado/configurado (padrão `mauve`).
-- `CCDI_DMS_SETTINGS` — caminho do `settings.json` do DMS, se não for
+- `TABELARADAR_DMS_SETTINGS` — caminho do `settings.json` do DMS, se não for
   o padrão.
+
+## Apoie o projeto
+
+- **Global**: [ko-fi.com/ianptkcs](https://ko-fi.com/ianptkcs)
+- **Brasil (Pix)**: escaneie o QR abaixo ou copie o código
+
+  ![Pix QR](pix-qr.png)
+
+  ```
+  00020126580014BR.GOV.BCB.PIX01365ad933b0-dcdc-4525-a736-0759902aeec65204000053039865802BR5925Ian Patrick da Costa Soar6009SAO PAULO62140510tQA85x6Dov63041FB6
+  ```
 
 ## Licença
 

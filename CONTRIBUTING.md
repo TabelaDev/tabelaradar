@@ -1,4 +1,4 @@
-# Contribuindo com o ccdi
+# Contribuindo com o TabelaRadar
 
 Obrigado pelo interesse. Antes de abrir um PR de código, dá uma olhada no
 `README.md` pra entender as decisões já tomadas (layout dos painéis, fonte

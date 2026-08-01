@@ -343,7 +343,7 @@ func (m appModel) View() string {
 		return ""
 	}
 
-	header := headerStyle(m.width).Render("CCDI — comissão central de inspeção disciplinar dos seus projetos")
+	header := headerStyle(m.width).Render("TabelaRadar — comissão central de inspeção disciplinar dos seus projetos")
 
 	footerText := "↑/↓ navegar · o/enter abrir editor · ctrl+h/l trocar painel · j/k rolar descrição · r reescanear · q sair    " + m.status
 	// Must be pre-truncated: footerStyle sets Width(), which word-wraps

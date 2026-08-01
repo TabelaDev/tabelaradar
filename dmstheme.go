@@ -7,8 +7,8 @@ import (
 )
 
 var (
-	dmsSettingsPath = envOr("CCDI_DMS_SETTINGS", filepath.Join(homeDir, ".config", "DankMaterialShell", "settings.json"))
-	fallbackAccent  = envOr("CCDI_ACCENT", "mauve")
+	dmsSettingsPath = envOr("TABELARADAR_DMS_SETTINGS", filepath.Join(homeDir, ".config", "DankMaterialShell", "settings.json"))
+	fallbackAccent  = envOr("TABELARADAR_ACCENT", "mauve")
 )
 
 type dmsThemeVariant struct {
@@ -103,7 +103,7 @@ func dmsAccentHex() string {
 }
 
 // catppuccinAccentHex maps a Catppuccin Mocha accent id to its hex, for the
-// manual CCDI_ACCENT fallback when DMS isn't installed/configured.
+// manual TABELARADAR_ACCENT fallback when DMS isn't installed/configured.
 // Unknown ids fall back to mauve.
 func catppuccinAccentHex(id string) string {
 	switch id {
