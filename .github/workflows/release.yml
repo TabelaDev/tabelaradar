@@ -23,10 +23,10 @@ jobs:
           - goos: darwin
             goarch: arm64
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -36,28 +36,42 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
-          BINARY="tabelaradar-${GOOS}-${GOARCH}"
-          go build -o "$BINARY" .
-          tar -czf "${BINARY}.tar.gz" "$BINARY"
+          mkdir -p dist
+          BIN="tabelaradar-${{ matrix.goos }}-${{ matrix.goarch }}"
+          go build -o "dist/$BIN" .
+          tar -C dist -czf "dist/$BIN.tar.gz" "$BIN"
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: tabelaradar-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: tabelaradar-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+          path: dist/*.tar.gz
 
   release:
     needs: build
     runs-on: ubuntu-latest
     steps:
       - name: Download all build artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: dist
           merge-multiple: true
+
+      # A tag with a SemVer pre-release suffix (v0.2.0-beta.1, v0.2.0-rc.1)
+      # is published as a GitHub prerelease: excluded from "Latest release"
+      # and clearly badged, so a beta doesn't shadow the last stable tag.
+      - name: Detect prerelease tag
+        id: prerelease
+        run: |
+          if [[ "${{ github.ref_name }}" == *-* ]]; then
+            echo "value=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "value=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           generate_release_notes: true
+          prerelease: ${{ steps.prerelease.outputs.value }}
           files: dist/*.tar.gz
