@@ -36,15 +36,15 @@ jobs:
           GOARCH: ${{ matrix.goarch }}
           CGO_ENABLED: 0
         run: |
-          BINARY="ccdi-${GOOS}-${GOARCH}"
+          BINARY="tabelaradar-${GOOS}-${GOARCH}"
           go build -o "$BINARY" .
           tar -czf "${BINARY}.tar.gz" "$BINARY"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ccdi-${{ matrix.goos }}-${{ matrix.goarch }}
-          path: ccdi-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
+          name: tabelaradar-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: tabelaradar-${{ matrix.goos }}-${{ matrix.goarch }}.tar.gz
 
   release:
     needs: build
