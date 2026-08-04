@@ -1,11 +1,11 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
 	"time"
+
+	"github.com/ianptkcs/tabelatuiui"
 )
 
 // projectJSON is the wire format for the ipc subcommand — the same fields
@@ -73,28 +73,10 @@ func (p Project) toIPC() projectJSON {
 // where did I stop, what could I pick up next" across every tracked repo
 // without going through the TUI.
 func runIPC(args []string) int {
-	if len(args) == 0 {
+	parsed, err := tuiui.ParseIPCArgs(args)
+	if err != nil {
 		fmt.Fprintln(os.Stderr, "uso: tabelaradar ipc <método> [key=value...] --json")
-		return 1
-	}
-
-	method := args[0]
-	filters := map[string]string{}
-	jsonOut := false
-	for _, arg := range args[1:] {
-		if arg == "--json" {
-			jsonOut = true
-			continue
-		}
-		if k, v, ok := strings.Cut(arg, "="); ok {
-			filters[k] = v
-			continue
-		}
-		fmt.Fprintf(os.Stderr, "argumento inválido: %q (esperado key=value ou --json)\n", arg)
-		return 1
-	}
-	if !jsonOut {
-		fmt.Fprintln(os.Stderr, "apenas saída --json é suportada por enquanto")
+		fmt.Fprintln(os.Stderr, err)
 		return 1
 	}
 
@@ -107,13 +89,13 @@ func runIPC(args []string) int {
 		fmt.Fprintln(os.Stderr, "aviso:", w)
 	}
 
-	switch method {
+	switch parsed.Method {
 	case "projects.list":
-		return ipcProjectsList(projects, filters)
+		return ipcProjectsList(projects, parsed.Filters)
 	case "projects.next":
 		return ipcProjectsNext(projects)
 	default:
-		fmt.Fprintf(os.Stderr, "método desconhecido: %q\n", method)
+		fmt.Fprintf(os.Stderr, "método desconhecido: %q\n", parsed.Method)
 		return 1
 	}
 }
@@ -129,7 +111,7 @@ func ipcProjectsList(projects []Project, filters map[string]string) int {
 		}
 		out = append(out, p.toIPC())
 	}
-	return writeJSON(out)
+	return tuiui.WriteJSON(out)
 }
 
 // ipcProjectsNext returns the single project tabelaradar itself would put first —
@@ -138,17 +120,7 @@ func ipcProjectsList(projects []Project, filters map[string]string) int {
 // shows top-to-bottom.
 func ipcProjectsNext(projects []Project) int {
 	if len(projects) == 0 {
-		return writeJSON(nil)
+		return tuiui.WriteJSON(nil)
 	}
-	return writeJSON(projects[0].toIPC())
-}
-
-func writeJSON(v any) int {
-	enc := json.NewEncoder(os.Stdout)
-	enc.SetIndent("", "  ")
-	if err := enc.Encode(v); err != nil {
-		fmt.Fprintln(os.Stderr, "erro ao serializar json:", err)
-		return 1
-	}
-	return 0
+	return tuiui.WriteJSON(projects[0].toIPC())
 }

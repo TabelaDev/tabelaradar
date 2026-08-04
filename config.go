@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/ianptkcs/tabelatuiui"
 )
 
 // rootEntry is one line of the config file: a path to monitor, or (if
@@ -17,19 +19,12 @@ type rootEntry struct {
 
 // configPath is the settings file listing which repos/repo-groups to
 // monitor. TABELARADAR_CONFIG overrides it, same envOr pattern as TABELARADAR_ROOT.
-var configPath = envOr("TABELARADAR_CONFIG", filepath.Join(configDir(), "tabelaradar", "config"))
-
-func configDir() string {
-	if dir, err := os.UserConfigDir(); err == nil {
-		return dir
-	}
-	return filepath.Join(homeDir, ".config")
-}
+var configPath = tuiui.EnvOr("TABELARADAR_CONFIG", filepath.Join(tuiui.ConfigDir(), "tabelaradar", "config"))
 
 // defaultConfig preserves tabelaradar's original behavior (scan TABELARADAR_ROOT, or
 // ~/codigo/pessoal if unset) for anyone who hasn't written a config file yet.
 func defaultConfig() []rootEntry {
-	return []rootEntry{{Path: envOr("TABELARADAR_ROOT", filepath.Join(homeDir, "codigo", "pessoal"))}}
+	return []rootEntry{{Path: tuiui.EnvOr("TABELARADAR_ROOT", filepath.Join(tuiui.HomeDir(), "codigo", "pessoal"))}}
 }
 
 // loadRootsConfig reads configPath, one entry per line:
@@ -58,7 +53,7 @@ func loadRootsConfig() ([]rootEntry, string) {
 		}
 		exclude := strings.HasPrefix(line, "!")
 		line = strings.TrimPrefix(line, "!")
-		entries = append(entries, rootEntry{Path: expandHome(strings.TrimSpace(line)), Exclude: exclude})
+		entries = append(entries, rootEntry{Path: tuiui.ExpandHome(strings.TrimSpace(line)), Exclude: exclude})
 	}
 	if err := scanner.Err(); err != nil {
 		return entries, fmt.Sprintf("erro lendo %s: %v", configPath, err)
@@ -67,14 +62,4 @@ func loadRootsConfig() ([]rootEntry, string) {
 		return defaultConfig(), ""
 	}
 	return entries, ""
-}
-
-func expandHome(path string) string {
-	if path == "~" {
-		return homeDir
-	}
-	if strings.HasPrefix(path, "~/") {
-		return filepath.Join(homeDir, path[2:])
-	}
-	return path
 }

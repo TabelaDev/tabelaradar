@@ -9,19 +9,13 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/ianptkcs/tabelatuiui"
 )
 
 var (
-	homeDir, _        = os.UserHomeDir()
-	claudeProjectsDir = filepath.Join(homeDir, ".claude", "projects")
+	claudeProjectsDir = filepath.Join(tuiui.HomeDir(), ".claude", "projects")
 )
-
-func envOr(key, fallback string) string {
-	if v := os.Getenv(key); v != "" {
-		return v
-	}
-	return fallback
-}
 
 // mdCandidates is the priority order used to pick a project's "what is this"
 // blurb: README first (the common case), then the planning-doc names this

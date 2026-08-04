@@ -8,6 +8,7 @@ não enviados, repos sem remote, projetos parados há tempo demais.
 [![Go Version](https://img.shields.io/github/go-mod/go-version/ianptkcs/tabelaradar?style=flat-square&logo=go&logoColor=white&color=00ADD8)](go.mod)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
 [![Built with Bubble Tea](https://img.shields.io/badge/built%20with-Bubble%20Tea-ff69b4?style=flat-square)](https://github.com/charmbracelet/bubbletea)
+[![Powered by tabelatuiui](https://img.shields.io/badge/theme-tabelatuiui-d6b4f7?style=flat-square)](https://github.com/ianptkcs/tabelatuiui)
 [![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/ianptkcs)
 
 </div>
@@ -29,6 +30,11 @@ seu `README.md`/`PLANNING.md`/`ESCOPO.md`/`STACK.md`/`TODO.md`/`CLAUDE.md`
 (o primeiro que existir), mais os bullets do índice de memória do Claude
 Code daquele projeto (`~/.claude/projects/<slug>/memory/MEMORY.md`), quando
 uma sessão já rodou ali dentro.
+
+O tema e o chrome compartilhado (header/footer/panels, padding ANSI-aware, os
+helpers de `ipc ... --json`) vêm da
+[`tabelatuiui`](https://github.com/ianptkcs/tabelatuiui), a lib de UI
+compartilhada dos meus TUIs Bubble Tea.
 
 ## Índice
 
