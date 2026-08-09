@@ -65,17 +65,20 @@ type appModel struct {
 
 	status string
 
-	// helpModal is the "?" overlay listing every keybinding — declared here
-	// (not per-update) so its scroll position survives toggles.
-	helpModal *tuiui.HelpModal
+	// helpModal is the "?" overlay listing every keybinding; settingsModal is
+	// the "," overlay that lets the user rebind them. Both read from reg.
+	helpModal     *tuiui.HelpModal
+	settingsModal *tuiui.SettingsModal
 }
 
 func newModel() appModel {
+	_ = reg.Load()
 	m := appModel{
 		helpModal: tuiui.NewHelpModal(tuiui.HelpSection{
-			Title:    "Atalhos",
-			Bindings: appKeymap,
+			Title:      "Atalhos",
+			BindingsFn: reg.Bindings,
 		}),
+		settingsModal: tuiui.NewSettingsModal(reg),
 	}
 	m.rescan()
 	m.tbl = table.New(table.WithFocused(true))
@@ -122,6 +125,7 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if sizeMsg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.width, m.height = sizeMsg.Width, sizeMsg.Height
 		m.helpModal.SetSize(sizeMsg.Width, sizeMsg.Height)
+		m.settingsModal.SetSize(sizeMsg.Width, sizeMsg.Height)
 		m.layout()
 		return m, nil
 	}
@@ -131,8 +135,11 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
-	// The help modal swallows all keys while it's open — the app must not
-	// act on them (so "q" closes the modal instead of quitting, etc.).
+	// The settings/help modals swallow all keys while open — the app must
+	// not act on them (so "q" closes the modal instead of quitting, etc.).
+	if m.settingsModal.Update(msg) {
+		return m, nil
+	}
 	if m.helpModal.Update(msg) {
 		return m, nil
 	}
@@ -143,16 +150,19 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch {
-	case key.Matches(keyMsg, keyQuit):
+	case key.Matches(keyMsg, resolve("quit")):
 		return m, tea.Quit
-	case key.Matches(keyMsg, keyHelp):
+	case key.Matches(keyMsg, resolve("help")):
 		m.helpModal.Toggle()
 		return m, nil
-	case key.Matches(keyMsg, keyRefresh):
+	case key.Matches(keyMsg, resolve("settings")):
+		m.settingsModal.Toggle()
+		return m, nil
+	case key.Matches(keyMsg, resolve("refresh")):
 		m.rescan()
 		m.layout()
 		return m, nil
-	case key.Matches(keyMsg, keyOpen):
+	case key.Matches(keyMsg, resolve("open")):
 		if p := m.current(); p != nil {
 			return m, openEditor(p.Path)
 		}
@@ -160,10 +170,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// vim-style pane navigation: ctrl+h focuses the project list, ctrl+l
 	// focuses the description panel so j/k scroll its text instead of
 	// moving the list cursor.
-	case key.Matches(keyMsg, keyFocusList):
+	case key.Matches(keyMsg, resolve("focus-list")):
 		m.focus = focusList
 		return m, nil
-	case key.Matches(keyMsg, keyFocusDesc):
+	case key.Matches(keyMsg, resolve("focus-desc")):
 		m.focus = focusDescription
 		return m, nil
 	}
@@ -366,7 +376,7 @@ func (m appModel) View() string {
 
 	header := theme.Header(m.width).Render("TabelaRadar — comissão central de inspeção disciplinar dos seus projetos")
 
-	footer := tuiui.NewFooter(appKeymap...).
+	footer := tuiui.NewFooter(reg.Bindings()...).
 		Status(m.status).
 		Render(m.width, theme)
 
@@ -395,6 +405,9 @@ func (m appModel) View() string {
 	body := lipgloss.JoinHorizontal(lipgloss.Top, sidebarBox, strings.Repeat(" ", panelGap), rightCol)
 
 	view := lipgloss.JoinVertical(lipgloss.Left, header, body, footer)
+	if m.settingsModal.Visible() {
+		return m.settingsModal.View(theme)
+	}
 	if m.helpModal.Visible() {
 		return m.helpModal.View(theme)
 	}

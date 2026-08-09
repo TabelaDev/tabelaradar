@@ -1,25 +1,30 @@
 package main
 
 import (
+	"path/filepath"
+
 	"github.com/charmbracelet/bubbles/key"
+	"github.com/ianptkcs/tabelatuiui"
 )
 
-// tabelaradar's keybindings, declared once and shared by the key dispatch in
-// Update (key.Matches), the footer hints (tuiui.Footer) and the help modal
-// (tuiui.HelpModal) — the hints can never drift out of sync with what
-// Update actually matches.
-var (
-	keyQuit      = key.NewBinding(key.WithKeys("q", "ctrl+c"), key.WithHelp("q", "quit"))
-	keyHelp      = key.NewBinding(key.WithKeys("?"), key.WithHelp("?", "keybindings"))
-	keyRefresh   = key.NewBinding(key.WithKeys("r"), key.WithHelp("r", "rescan"))
-	keyOpen      = key.NewBinding(key.WithKeys("o", "enter"), key.WithHelp("o/enter", "abrir editor"))
-	keyFocusList = key.NewBinding(key.WithKeys("ctrl+h"), key.WithHelp("ctrl+h", "projetos"))
-	keyFocusDesc = key.NewBinding(key.WithKeys("ctrl+l"), key.WithHelp("ctrl+l", "descrição"))
-	keyScroll    = key.NewBinding(key.WithKeys("j", "k", "up", "down"), key.WithHelp("j/k", "rolar descrição"))
-)
+// reg is tabelaradar's single source of truth for keybindings: defaults
+// registered below, overrides persisted to ~/.config/tabelaradar/keybindings.json.
+// Resolve() returns the effective binding, shared by dispatch, footer and
+// help modal — a user rebind via the settings modal applies to all at once.
+var reg = tuiui.NewKeyRegistry(filepath.Join(tuiui.ConfigDir(), "tabelaradar", "keybindings.json"))
 
-// appKeymap is the full list of bindings the footer hints and the help modal
-// render from.
-var appKeymap = []key.Binding{
-	keyRefresh, keyOpen, keyFocusList, keyFocusDesc, keyScroll, keyHelp, keyQuit,
+func init() {
+	reg.RegisterMany(
+		tuiui.Action{ID: "quit", Help: "quit", Keys: []string{"q", "ctrl+c"}},
+		tuiui.Action{ID: "help", Help: "keybindings", Keys: []string{"?"}},
+		tuiui.Action{ID: "settings", Help: "rebind keys", Keys: []string{","}},
+		tuiui.Action{ID: "refresh", Help: "rescan", Keys: []string{"r"}},
+		tuiui.Action{ID: "open", Help: "abrir editor", Keys: []string{"o", "enter"}},
+		tuiui.Action{ID: "focus-list", Help: "projetos", Keys: []string{"ctrl+h"}},
+		tuiui.Action{ID: "focus-desc", Help: "descrição", Keys: []string{"ctrl+l"}},
+		tuiui.Action{ID: "scroll", Help: "rolar descrição", Keys: []string{"j", "k", "up", "down"}, Label: "j/k"},
+	)
 }
+
+// resolve is a short alias so Update reads like the old named keys.
+func resolve(id string) key.Binding { return reg.Resolve(id) }
