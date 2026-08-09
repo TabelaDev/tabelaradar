@@ -149,6 +149,16 @@ Exemplo:
 - `TABELARADAR_DMS_SETTINGS` — caminho do `settings.json` do DMS, se não for
   o padrão.
 
+## Desenvolvimento
+
+```bash
+go test ./...
+```
+
+## Changelog
+
+Veja [CHANGELOG.md](CHANGELOG.md) para o histórico de versões.
+
 ## Apoie o projeto
 
 - **Global**: [ko-fi.com/ianptkcs](https://ko-fi.com/ianptkcs)
