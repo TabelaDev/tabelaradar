@@ -7,9 +7,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/bubbles/table"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
+	"github.com/ianptkcs/tabelatuiui"
 )
 
 // panelFocus selects which of the two interactive panels — the sidebar
@@ -62,10 +64,19 @@ type appModel struct {
 	descMaxLines      int
 
 	status string
+
+	// helpModal is the "?" overlay listing every keybinding — declared here
+	// (not per-update) so its scroll position survives toggles.
+	helpModal *tuiui.HelpModal
 }
 
 func newModel() appModel {
-	m := appModel{}
+	m := appModel{
+		helpModal: tuiui.NewHelpModal(tuiui.HelpSection{
+			Title:    "Atalhos",
+			Bindings: appKeymap,
+		}),
+	}
 	m.rescan()
 	m.tbl = table.New(table.WithFocused(true))
 	m.applyStyles()
@@ -110,6 +121,7 @@ func (m appModel) Init() tea.Cmd { return nil }
 func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	if sizeMsg, ok := msg.(tea.WindowSizeMsg); ok {
 		m.width, m.height = sizeMsg.Width, sizeMsg.Height
+		m.helpModal.SetSize(sizeMsg.Width, sizeMsg.Height)
 		m.layout()
 		return m, nil
 	}
@@ -119,19 +131,28 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 	}
 
+	// The help modal swallows all keys while it's open — the app must not
+	// act on them (so "q" closes the modal instead of quitting, etc.).
+	if m.helpModal.Update(msg) {
+		return m, nil
+	}
+
 	keyMsg, ok := msg.(tea.KeyMsg)
 	if !ok {
 		return m.forwardToTable(msg)
 	}
 
-	switch keyMsg.String() {
-	case "q", "ctrl+c":
+	switch {
+	case key.Matches(keyMsg, keyQuit):
 		return m, tea.Quit
-	case "r":
+	case key.Matches(keyMsg, keyHelp):
+		m.helpModal.Toggle()
+		return m, nil
+	case key.Matches(keyMsg, keyRefresh):
 		m.rescan()
 		m.layout()
 		return m, nil
-	case "o", "enter":
+	case key.Matches(keyMsg, keyOpen):
 		if p := m.current(); p != nil {
 			return m, openEditor(p.Path)
 		}
@@ -139,10 +160,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// vim-style pane navigation: ctrl+h focuses the project list, ctrl+l
 	// focuses the description panel so j/k scroll its text instead of
 	// moving the list cursor.
-	case "ctrl+h":
+	case key.Matches(keyMsg, keyFocusList):
 		m.focus = focusList
 		return m, nil
-	case "ctrl+l":
+	case key.Matches(keyMsg, keyFocusDesc):
 		m.focus = focusDescription
 		return m, nil
 	}
@@ -343,27 +364,22 @@ func (m appModel) View() string {
 		return ""
 	}
 
-	header := headerStyle(m.width).Render("TabelaRadar — comissão central de inspeção disciplinar dos seus projetos")
+	header := theme.Header(m.width).Render("TabelaRadar — comissão central de inspeção disciplinar dos seus projetos")
 
-	footerText := "↑/↓ navegar · o/enter abrir editor · ctrl+h/l trocar painel · j/k rolar descrição · r reescanear · q sair    " + m.status
-	// Must be pre-truncated: footerStyle sets Width(), which word-wraps
-	// overflow instead of truncating it. An untruncated wrap silently turns
-	// the footer into 2 lines, which nothing in layout() accounts for.
-	if avail := m.width - 4; avail > 0 {
-		footerText = strings.TrimRight(padLines(footerText, avail), " ")
-	}
-	footer := footerStyle(m.width).Render(footerText)
+	footer := tuiui.NewFooter(appKeymap...).
+		Status(m.status).
+		Render(m.width, theme)
 
-	sidebarBox := panelStyle(m.focus == focusList).Render(padLines(
-		titleStyle().Render("Projetos")+"\n"+m.tbl.View(), m.sidebarInnerWidth,
+	sidebarBox := theme.Panel(m.focus == focusList).Render(padLines(
+		theme.Title().Render("Projetos")+"\n"+m.tbl.View(), m.sidebarInnerWidth,
 	))
 
 	statsTitle := "status"
 	if p := m.current(); p != nil {
 		statsTitle = p.Name
 	}
-	statsBox := panelStyle(false).Render(padLines(
-		titleStyle().Render(statsTitle)+"\n"+padToHeight(m.renderStats(), m.statsLines), m.rightInnerWidth,
+	statsBox := theme.Panel(false).Render(padLines(
+		theme.Title().Render(statsTitle)+"\n"+padToHeight(m.renderStats(), m.statsLines), m.rightInnerWidth,
 	))
 
 	descLines := m.currentDescLines()
@@ -371,14 +387,18 @@ func (m appModel) View() string {
 	if total := len(descLines); total > m.descMaxLines {
 		descTitle = fmt.Sprintf("descrição (%d–%d/%d)", m.detailScroll+1, min(m.detailScroll+m.descMaxLines, total), total)
 	}
-	descBox := panelStyle(m.focus == focusDescription).Render(padLines(
-		titleStyle().Render(descTitle)+"\n"+m.renderDescBody(descLines), m.rightInnerWidth,
+	descBox := theme.Panel(m.focus == focusDescription).Render(padLines(
+		theme.Title().Render(descTitle)+"\n"+m.renderDescBody(descLines), m.rightInnerWidth,
 	))
 
 	rightCol := lipgloss.JoinVertical(lipgloss.Left, statsBox, descBox)
 	body := lipgloss.JoinHorizontal(lipgloss.Top, sidebarBox, strings.Repeat(" ", panelGap), rightCol)
 
-	return lipgloss.JoinVertical(lipgloss.Left, header, body, footer)
+	view := lipgloss.JoinVertical(lipgloss.Left, header, body, footer)
+	if m.helpModal.Visible() {
+		return m.helpModal.View(theme)
+	}
+	return view
 }
 
 // renderStats is the compact top-right panel: the at-a-glance columns that
@@ -387,7 +407,7 @@ func (m appModel) View() string {
 func (m appModel) renderStats() string {
 	p := m.current()
 	if p == nil {
-		return dimStyle().Render("nenhum projeto")
+		return theme.Dim().Render("nenhum projeto")
 	}
 	return strings.Join([]string{
 		fmt.Sprintf("Sujo: %s", dirtyCell(*p)),
@@ -403,12 +423,12 @@ func (m appModel) renderStats() string {
 func (m appModel) currentDescLines() []string {
 	p := m.current()
 	if p == nil {
-		return []string{dimStyle().Render("nenhum projeto")}
+		return []string{theme.Dim().Render("nenhum projeto")}
 	}
 
 	width := m.rightInnerWidth
 	var b strings.Builder
-	b.WriteString(dimStyle().Render(p.Path) + "\n\n")
+	b.WriteString(theme.Dim().Render(p.Path) + "\n\n")
 
 	switch {
 	case !p.IsGit:
@@ -428,11 +448,11 @@ func (m appModel) currentDescLines() []string {
 	}
 
 	if p.Description != "" {
-		b.WriteString("\n" + dimStyle().Render(p.DescriptionSrc) + ":\n" + wrapText(p.Description, width) + "\n")
+		b.WriteString("\n" + theme.Dim().Render(p.DescriptionSrc) + ":\n" + wrapText(p.Description, width) + "\n")
 	}
 
 	if len(p.MemoryNotes) > 0 {
-		b.WriteString("\n" + dimStyle().Render("memória do Claude Code:") + "\n")
+		b.WriteString("\n" + theme.Dim().Render("memória do Claude Code:") + "\n")
 		for _, note := range p.MemoryNotes {
 			b.WriteString(wrapText("• "+note, width) + "\n")
 		}

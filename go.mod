@@ -6,7 +6,7 @@ require (
 	github.com/charmbracelet/bubbles v1.0.0
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/lipgloss v1.1.0
-	github.com/ianptkcs/tabelatuiui v0.0.0-20260804182352-d98d1031aa47
+	github.com/ianptkcs/tabelatuiui v0.2.0
 )
 
 require (

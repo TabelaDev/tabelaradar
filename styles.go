@@ -5,17 +5,9 @@ import (
 	"github.com/ianptkcs/tabelatuiui"
 )
 
-// Thin wrappers over tabelatuiui's shared chrome, so the model/view code
-// keeps calling the same short helpers it always did. Colors live in the
-// theme resolved in theme.go (Catppuccin Mocha + the DMS accent).
-
-func headerStyle(width int) lipgloss.Style { return theme.Header(width) }
-func footerStyle(width int) lipgloss.Style { return theme.Footer(width) }
-func panelStyle(focused bool) lipgloss.Style {
-	return theme.Panel(focused)
-}
-func titleStyle() lipgloss.Style { return theme.Title() }
-func dimStyle() lipgloss.Style   { return theme.Dim() }
+// App-specific styles on top of tabelatuiui's shared chrome (called as
+// theme.Header/Footer/Panel/Title/Dim directly). Colors live in the theme
+// resolved in theme.go (Catppuccin Mocha + the DMS accent).
 
 // Semantic status styles follow the Catppuccin style guide — the same
 // meanings the lib's Success/Warning/Error/Muted carry, kept as named
@@ -39,6 +31,6 @@ func staleStyle() lipgloss.Style {
 
 // Layout helpers come straight from the lib.
 
-func padLines(s string, width int) string      { return tuiui.PadLines(s, width) }
-func wrapText(s string, width int) string      { return tuiui.WrapText(s, width) }
-func padToHeight(s string, lines int) string   { return tuiui.PadToHeight(s, lines) }
+func padLines(s string, width int) string    { return tuiui.PadLines(s, width) }
+func wrapText(s string, width int) string    { return tuiui.WrapText(s, width) }
+func padToHeight(s string, lines int) string { return tuiui.PadToHeight(s, lines) }
