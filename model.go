@@ -162,6 +162,19 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.rescan()
 		m.layout()
 		return m, nil
+	case key.Matches(keyMsg, resolve("reload")):
+		// Config-file-first: an external edit to keybindings.json takes effect
+		// here, without restarting. The roots config is re-read by rescan.
+		changed, err := reg.Reload()
+		m.rescan()
+		m.layout()
+		switch {
+		case err != nil:
+			m.status = "keybindings: " + err.Error()
+		case changed:
+			m.status += " — keybindings recarregadas"
+		}
+		return m, nil
 	case key.Matches(keyMsg, resolve("open")):
 		if p := m.current(); p != nil {
 			return m, openEditor(p.Path)
