@@ -1,27 +1,56 @@
-# Contribuindo com o TabelaRadar
+# Contributing to Tabelaradar
 
-Obrigado pelo interesse. Antes de abrir um PR de código, dá uma olhada no
-`README.md` pra entender as decisões já tomadas (layout dos painéis, fonte
-dos dados — tudo inferido do próprio git + arquivos de prosa do projeto,
-sem metadado separado).
+**English** · [Português](CONTRIBUTING.pt-BR.md)
 
-## Reportando bugs / sugerindo features
+Thanks for the interest. Before opening a code PR, read `README.md` to
+understand the decisions already made.
 
-Abra uma [issue](../../issues/new/choose) usando o template apropriado.
+## Reporting bugs / suggesting features
 
-## Enviando um PR
+Open an [issue](../../issues/new/choose) using the appropriate template.
 
-1. Fork o repositório.
-2. Crie uma branch a partir de `main`.
-3. Rode `go vet ./...`, `go test ./...` e `go build ./...` localmente antes
-   de abrir o PR.
-4. Abra o PR usando o template — descreva o quê e o porquê da mudança.
+## Sending a PR
 
-## Licença
+1. Fork the repository.
+2. Create a branch off `main`.
+3. Run `go vet ./...`, `go test ./...` and `go build ./...` locally before
+   opening the PR.
+4. Open the PR using the template — describe the what and the why of the
+   change.
 
-Ao contribuir, você concorda que sua contribuição será licenciada sob a
-[AGPL-3.0](LICENSE), a mesma licença do projeto.
+## Language
 
-## Código de conduta
+The convention across every TabelaDev project, so that nothing has to be
+decided again per repo:
 
-Seja respeitoso. Críticas técnicas são bem-vindas; ataques pessoais não.
+**English, no exceptions** — identifiers, file names, routes, query
+parameters, database schema, code comments, commit messages, branch names.
+The one carve-out is Brazilian domain vocabulary with no useful translation
+(`pix`, `boleto`, `fatura`, `cpf`, `cnpj`, institution names): those are proper
+nouns and stay as they are, the same way `oauth` or `webhook` do.
+
+**Bilingual** — `README.md` and `CONTRIBUTING.md` only. English is canonical
+(it is what GitHub renders); Portuguese lives beside it as `README.pt-BR.md`
+and `CONTRIBUTING.pt-BR.md`, with a language selector at the top of each.
+
+**English only** — `CHANGELOG.md`. Deliberately not bilingual: it changes on
+every release, and two hand-maintained copies drift within a few entries.
+
+**One language, chosen by purpose, never translated** — working notes and
+process files (`AGENTS.md`, `CLAUDE.md`, `TODO.md`, `PLANO.md`, `requests/`,
+issue and PR templates, anything under `docs/archive/`). They have no external
+reader; translating them is cost without benefit.
+
+**The language of the product's audience** — UI strings, AI prompts that ask
+for a Portuguese answer, and content that _is_ the product (RPG campaign
+material, course material). Portuguese there is the correct answer, not a
+pending translation.
+
+## License
+
+By contributing, you agree that your contribution will be licensed under the
+[AGPL-3.0](LICENSE), the same license as the project.
+
+## Code of conduct
+
+Be respectful. Technical criticism is welcome; personal attacks are not.
