@@ -116,34 +116,61 @@ uma.
 
 ## Configuração
 
+Tudo fica em `~/.config/tabelaradar/config.toml` (sobrescrível via
+`TABELARADAR_CONFIG`). O arquivo é opcional e parcial: só as chaves presentes
+sobrescrevem, o resto segue no default. `f5` recarrega sem reiniciar.
+
+```toml
+roots = ["~/codigo/pessoal", "~/codigo/tabeladev"]
+exclude = ["~/codigo/pessoal/spotdash"]
+
+[scanner]
+description_files = ["README.md", "PLANNING.md", "ESCOPO.md", "STACK.md", "TODO.md", "CLAUDE.md"]
+claude_projects_dir = "~/.claude/projects"
+
+[layout]
+sidebar_width_share = 1  # razão de LARGURA sidebar:coluna-direita
+right_width_share   = 4
+stats_height_share  = 1  # razão de ALTURA stats:descrição
+desc_height_share   = 4
+
+[general]
+editor = "nvim"  # vazio = usa $EDITOR, depois nvim
+```
+
 ### Quais repos monitorar
 
-`~/.config/tabelaradar/config` (padrão do `os.UserConfigDir()`; sobrescrível
-via `TABELARADAR_CONFIG`) lista, uma entrada por linha, o que entra no scan:
+`roots` aceita dois tipos de caminho:
 
-- um caminho para uma pasta-de-repos: cada subpasta com `.git` vira uma
-  linha na tabela (é como `~/codigo/pessoal` funciona hoje);
-- um caminho apontando direto pra um repositório git: ele entra sozinho,
-  como uma linha só (útil pra monitorar um repo solto fora das pastas
-  padrão, ex. `~/codigo/algum-projeto-solto`);
-- `!<caminho>` exclui esse caminho específico — seja uma raiz inteira, seja
-  um filho de uma raiz-de-repos citada acima.
+- uma pasta-de-repos: cada subpasta com `.git` vira uma linha na tabela (é
+  como `~/codigo/pessoal` funciona);
+- um repositório git direto: entra sozinho, como uma linha só (útil pra um
+  repo solto fora das pastas padrão).
 
-Linhas em branco e começando com `#` são ignoradas. Sem esse arquivo, o
-comportamento é o de sempre: varre só `TABELARADAR_ROOT` (ou `~/codigo/pessoal`).
+`exclude` esconde um caminho específico — seja uma raiz inteira, seja um filho
+de uma raiz citada em `roots`. A ordem não importa entre as duas listas.
 
-Exemplo:
+Sem nenhum arquivo, varre só `TABELARADAR_ROOT` (ou `~/codigo/pessoal`).
+
+### Migrando do formato antigo
+
+Antes da 0.3.0 a config era `~/.config/tabelaradar/config`, uma entrada por
+linha com `!` prefixando exclusões. **Esse arquivo continua sendo lido** quando
+não existe `config.toml`, com um aviso na barra de status. A tradução é direta:
 
 ```
-~/codigo/pessoal
-!~/codigo/pessoal/spotdash
-~/codigo/algum-projeto-solto
+~/codigo/pessoal              →  roots   = ["~/codigo/pessoal"]
+!~/codigo/pessoal/spotdash    →  exclude = ["~/codigo/pessoal/spotdash"]
 ```
+
+Criado o `config.toml`, ele passa a valer sozinho — os dois formatos não se
+misturam, e o arquivo antigo pode ser apagado.
 
 ### Outras variáveis
 
-- `TABELARADAR_ROOT` — diretório varrido quando não existe
-  `~/.config/tabelaradar/config` (padrão `~/codigo/pessoal`).
+- `TABELARADAR_CONFIG` — caminho do `config.toml`, se não for o padrão.
+- `TABELARADAR_ROOT` — diretório varrido quando não existe config nenhuma
+  (padrão `~/codigo/pessoal`).
 - `TABELARADAR_ACCENT` — accent Catppuccin Mocha manual, usado só quando o
   DankMaterialShell não está instalado/configurado (padrão `mauve`).
 - `TABELARADAR_DMS_SETTINGS` — caminho do `settings.json` do DMS, se não for

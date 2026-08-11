@@ -36,16 +36,14 @@ const (
 	minVisibleRows     = 3
 	minStatsLines      = 3
 	minDescLines       = 4
-	// sidebar:right-column WIDTH ratio, side by side.
-	sidebarWidthShare = 1
-	rightWidthShare   = 4
-	// stats:descrição HEIGHT ratio, stacked in the right column.
-	statsHeightShare = 1
-	descHeightShare  = 4
-	panelGap         = 1
-	minSidebarWidth  = 14
-	minRightWidth    = 30
+	panelGap           = 1
+	minSidebarWidth    = 14
+	minRightWidth      = 30
 )
+
+// The sidebar:right-column width ratio and the stats:descrição height ratio
+// now live in config.toml ([layout]); normalize keeps every share >= 1 so the
+// divisions below can't hit zero.
 
 type appModel struct {
 	projects []Project
@@ -163,8 +161,10 @@ func (m appModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.layout()
 		return m, nil
 	case key.Matches(keyMsg, resolve("reload")):
-		// Config-file-first: an external edit to keybindings.json takes effect
-		// here, without restarting. The roots config is re-read by rescan.
+		// Config-file-first: external edits to keybindings.json and config.toml
+		// take effect here, without restarting. rescan re-reads config.toml on
+		// its own (and reports a bad one through m.status), so this only has to
+		// add the keybindings half.
 		changed, err := reg.Reload()
 		m.rescan()
 		m.layout()
@@ -231,11 +231,15 @@ func (m appModel) current() *Project {
 
 type editorFinishedMsg struct{}
 
-// openEditor suspends the TUI to run $EDITOR (falling back to nvim) against
-// the selected project's root, the same "jump straight into it" shortcut
-// lazygit-style tools give you once you've spotted what needs attention.
+// openEditor suspends the TUI to run the editor against the selected
+// project's root, the same "jump straight into it" shortcut lazygit-style
+// tools give you once you've spotted what needs attention. Resolution order:
+// config.toml's [general].editor, then $EDITOR, then nvim.
 func openEditor(path string) tea.Cmd {
-	editor := os.Getenv("EDITOR")
+	editor := settings.General.Editor
+	if editor == "" {
+		editor = os.Getenv("EDITOR")
+	}
 	if editor == "" {
 		editor = "nvim"
 	}
@@ -259,7 +263,7 @@ func (m *appModel) layout() {
 	if minRow := (minSidebarWidth + 4) + (minRightWidth + 4); totalRowWidth < minRow {
 		totalRowWidth = minRow
 	}
-	sidebarBoxWidth := totalRowWidth * sidebarWidthShare / (sidebarWidthShare + rightWidthShare)
+	sidebarBoxWidth := totalRowWidth * settings.Layout.SidebarWidthShare / (settings.Layout.SidebarWidthShare + settings.Layout.RightWidthShare)
 	rightBoxWidth := totalRowWidth - sidebarBoxWidth
 
 	m.sidebarInnerWidth = sidebarBoxWidth - 4
@@ -291,7 +295,7 @@ func (m *appModel) layout() {
 		bodyHeight = minBody
 	}
 
-	statsBoxHeight := bodyHeight * statsHeightShare / (statsHeightShare + descHeightShare)
+	statsBoxHeight := bodyHeight * settings.Layout.StatsHeightShare / (settings.Layout.StatsHeightShare + settings.Layout.DescHeightShare)
 	if statsBoxHeight < statsBoxOverhead+minStatsLines {
 		statsBoxHeight = statsBoxOverhead + minStatsLines
 	}

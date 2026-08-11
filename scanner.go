@@ -9,19 +9,15 @@ import (
 	"strconv"
 	"strings"
 	"time"
-
-	"github.com/ianptkcs/tabelatuiui"
 )
 
-var (
-	claudeProjectsDir = filepath.Join(tuiui.HomeDir(), ".claude", "projects")
-)
-
-// mdCandidates is the priority order used to pick a project's "what is this"
-// blurb: README first (the common case), then the planning-doc names this
-// user's own repos actually use (see gosplan's ESCOPO.md/STACK.md, dna's
-// numbered docs), falling back to whatever .md exists at all.
-var mdCandidates = []string{"README.md", "PLANNING.md", "ESCOPO.md", "STACK.md", "TODO.md", "CLAUDE.md"}
+// Both of these come from config.toml ([scanner]). The defaults are the old
+// hardcoded values: ~/.claude/projects, and README first (the common case)
+// then the planning-doc names this user's own repos actually use (see
+// gosplan's ESCOPO.md/STACK.md, dna's numbered docs), falling back to
+// whatever .md exists at all.
+func claudeProjectsDir() string { return settings.Scanner.ClaudeProjectsDir }
+func mdCandidates() []string    { return settings.Scanner.DescriptionFiles }
 
 type Project struct {
 	Name string
@@ -194,7 +190,7 @@ func scanGit(p *Project) {
 }
 
 func findDescription(path string) (desc, src string) {
-	for _, name := range mdCandidates {
+	for _, name := range mdCandidates() {
 		if data, err := os.ReadFile(filepath.Join(path, name)); err == nil {
 			if d := extractParagraph(string(data)); d != "" {
 				return d, name
@@ -260,7 +256,7 @@ func extractParagraph(content string) string {
 // subcommand wants to hand an LLM asking "what's left to do here".
 func readMemory(path string) (notes []string, memoryPath, nextSteps string) {
 	slug := strings.ReplaceAll(path, "/", "-")
-	memDir := filepath.Join(claudeProjectsDir, slug, "memory")
+	memDir := filepath.Join(claudeProjectsDir(), slug, "memory")
 	idxPath := filepath.Join(memDir, "MEMORY.md")
 	data, err := os.ReadFile(idxPath)
 	if err != nil {
