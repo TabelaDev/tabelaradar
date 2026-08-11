@@ -2,8 +2,10 @@
 
 # TabelaRadar
 
-**TUI que fiscaliza a saúde git dos seus repositórios locais** — WIP, commits
-não enviados, repos sem remote, projetos parados há tempo demais.
+**A TUI that audits the git health of your local repositories** — WIP, unpushed
+commits, repos with no remote, projects left alone for too long.
+
+**English** · [Português](README.pt-BR.md)
 
 [![Go Version](https://img.shields.io/github/go-mod/go-version/TabelaDev/tabelaradar?style=flat-square&logo=go&logoColor=white&color=00ADD8)](go.mod)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue?style=flat-square)](LICENSE)
@@ -16,45 +18,44 @@ não enviados, repos sem remote, projetos parados há tempo demais.
 
 ---
 
-## O que é
+## What it is
 
-Um [Bubble Tea](https://github.com/charmbracelet/bubbletea) TUI que varre
-os repositórios/pastas-de-repositórios listados nas settings (por padrão só
-`~/codigo/pessoal`) e fiscaliza o estado de cada projeto: o que está em WIP,
-o que tem commits não enviados, o que não tem remote configurado (logo, sem
-backup fora da máquina) e o que já não é tocado há um tempo — a inspeção
-disciplinar dos seus repositórios.
+A [Bubble Tea](https://github.com/charmbracelet/bubbletea) TUI that scans the
+repositories and folders-of-repositories listed in the settings (by default only
+`~/codigo/pessoal`) and audits the state of each project: what is in WIP, what has
+unpushed commits, what has no remote configured (and therefore no backup off the
+machine) and what has not been touched in a while — a disciplinary inspection of
+your repositories.
 
-Não existe nenhum arquivo de metadado separado — todo o estado é inferido
-do próprio git de cada repositório, mais o primeiro parágrafo de prosa do
-seu `README.md`/`PLANNING.md`/`ESCOPO.md`/`STACK.md`/`TODO.md`/`CLAUDE.md`
-(o primeiro que existir), mais os bullets do índice de memória do Claude
-Code daquele projeto (`~/.claude/projects/<slug>/memory/MEMORY.md`), quando
-uma sessão já rodou ali dentro.
+There is no separate metadata file — the whole state is inferred from each
+repository's own git, plus the first paragraph of prose from its
+`README.md`/`PLANNING.md`/`ESCOPO.md`/`STACK.md`/`TODO.md`/`CLAUDE.md` (whichever
+exists first), plus the bullets from that project's Claude Code memory index
+(`~/.claude/projects/<slug>/memory/MEMORY.md`), when a session has run in there.
 
-O tema e o chrome compartilhado (header/footer/panels, padding ANSI-aware, os
-helpers de `ipc ... --json`) vêm da
-[`tabelatuiui`](https://github.com/TabelaDev/tabelatuiui), a lib de UI
-compartilhada dos meus TUIs Bubble Tea.
+The theme and the shared chrome (header/footer/panels, ANSI-aware padding, the
+`ipc ... --json` helpers) come from
+[`tabelatuiui`](https://github.com/TabelaDev/tabelatuiui), the shared UI library
+of my Bubble Tea TUIs.
 
-## Índice
+## Contents
 
-- [Instalação](#instalação)
+- [Installation](#installation)
 - [Layout](#layout)
-- [Uso](#uso)
+- [Usage](#usage)
 - [IPC](#ipc)
-- [Configuração](#configuração)
-- [Licença](#licença)
+- [Configuration](#configuration)
+- [License](#license)
 
-## Instalação
+## Installation
 
-Requer Go 1.26+.
+Requires Go 1.26+.
 
 ```bash
 go install github.com/ianptkcs/tabelaradar@latest
 ```
 
-Ou compilando a partir do source:
+Or building from source:
 
 ```bash
 git clone https://github.com/TabelaDev/tabelaradar.git
@@ -64,61 +65,61 @@ go build -o tabelaradar .
 
 ## Layout
 
-Três painéis:
+Three panels:
 
-- **Projetos** (esquerda, 1/5 da largura) — só os nomes, pra navegar rápido
-  pela lista inteira. O glyph antes do nome resume o status: `○` sem git,
-  `●` com mudanças não commitadas, `▲` com commits não enviados, `✕` com
-  commits mas sem remote, `✓` limpo e sincronizado.
-- **status** (topo direita, 1/5 da altura) — sujo (arquivos não
-  commitados), push (commits não enviados) e atividade (há quanto tempo
-  desde o último commit) do projeto selecionado.
-- **descrição** (embaixo, 4/5 da altura) — o resto: path, último commit,
-  avisos (sem remote, stash), descrição extraída do README/PLANNING/etc. e
-  bullets da memória do Claude Code daquele projeto. Quando o conteúdo não
-  cabe, o título mostra o intervalo visível (`descrição (1–13/27)`) e dá
-  pra rolar.
+- **Projects** (left, 1/5 of the width) — names only, to move quickly through the
+  whole list. The glyph before the name sums up the status: `○` no git, `●`
+  uncommitted changes, `▲` unpushed commits, `✕` commits but no remote, `✓` clean
+  and in sync.
+- **status** (top right, 1/5 of the height) — dirty (uncommitted files), push
+  (unpushed commits) and activity (how long since the last commit) for the
+  selected project.
+- **description** (below, 4/5 of the height) — everything else: path, last commit,
+  warnings (no remote, stash), the description extracted from
+  README/PLANNING/etc. and the bullets from that project's Claude Code memory.
+  When the content does not fit, the title shows the visible range
+  (`description (1–13/27)`) and it scrolls.
 
-## Uso
+## Usage
 
 ```
-tabelaradar         # abre a TUI
-tabelaradar list    # dump em texto plano, sem TTY — útil pra scriptar
+tabelaradar         # opens the TUI
+tabelaradar list    # plain-text dump, no TTY — useful for scripting
 ```
 
-Dentro da TUI: `↑`/`↓` (ou `j`/`k`) navegam a lista de projetos,
-`ctrl+h`/`ctrl+l` alternam entre o painel de projetos e o de descrição,
-`j`/`k` (ou `↑`/`↓`) rolam o texto da descrição quando ela está focada,
-`o`/`enter` abre o projeto selecionado no `$EDITOR` (padrão `nvim`), `r`
-reescaneia, `q` sai.
+Inside the TUI: `↑`/`↓` (or `j`/`k`) move through the project list,
+`ctrl+h`/`ctrl+l` switch between the projects panel and the description one,
+`j`/`k` (or `↑`/`↓`) scroll the description text while it is focused, `o`/`enter`
+opens the selected project in `$EDITOR` (`nvim` by default), `r` rescans and `q`
+quits.
 
 ## IPC
 
-Pra scripts ou pra um LLM perguntar "o que falta fazer, onde eu parei em
-cada projeto, o que dá pra começar a implementar" sem abrir a TUI,
-`tabelaradar` expõe um subcomando `ipc` não-interativo, no mesmo espírito do
-`dcal ipc <método> --json`/`djobs ipc <método> --json`:
+For scripts, or for an LLM to ask "what is left to do, where did I stop in each
+project, what could be started" without opening the TUI, `tabelaradar` exposes a
+non-interactive `ipc` subcommand, in the same spirit as
+`dcal ipc <method> --json`/`djobs ipc <method> --json`:
 
 ```bash
-tabelaradar ipc projects.list --json                  # todo projeto trackeado, com status git + descrição + próximos passos
-tabelaradar ipc projects.list dirty=true --json       # só quem tem mudanças não commitadas
-tabelaradar ipc projects.list name=tabelacal --json   # um projeto específico
-tabelaradar ipc projects.next --json                  # o projeto que o próprio tabelaradar priorizaria (mid-flight > mais recente)
+tabelaradar ipc projects.list --json                  # every tracked project, with git status + description + next steps
+tabelaradar ipc projects.list dirty=true --json       # only those with uncommitted changes
+tabelaradar ipc projects.list name=tabelacal --json   # one specific project
+tabelaradar ipc projects.next --json                  # the project tabelaradar itself would prioritise (mid-flight > most recent)
 ```
 
-Cada projeto no JSON traz, além dos campos de status git (branch, sujo,
-ahead/behind, último commit), `description` (extraída do README/PLANNING/
-etc.), `memory_notes` (os hooks de uma linha do índice de memória) e
-`next_steps` — o corpo **inteiro** (não só o hook truncado) de qualquer
-memória daquele projeto marcada `type: next-steps` na sua própria
-`~/.claude/projects/<slug>/memory/` — vazio se o projeto ainda não tiver
-uma.
+Beyond the git status fields (branch, dirty, ahead/behind, last commit), each
+project in the JSON carries `description` (extracted from README/PLANNING/etc.),
+`memory_notes` (the one-line hooks from the memory index) and `next_steps` — the
+**entire** body (not just the truncated hook) of any memory of that project marked
+`type: next-steps` in its own `~/.claude/projects/<slug>/memory/`, empty when the
+project does not have one yet.
 
-## Configuração
+## Configuration
 
-Tudo fica em `~/.config/tabelaradar/config.toml` (sobrescrível via
-`TABELARADAR_CONFIG`). O arquivo é opcional e parcial: só as chaves presentes
-sobrescrevem, o resto segue no default. `f5` recarrega sem reiniciar.
+Everything lives in `~/.config/tabelaradar/config.toml` (overridable through
+`TABELARADAR_CONFIG`). The file is optional and partial: only the keys present
+override anything, the rest stay on their defaults. `f5` reloads without
+restarting.
 
 ```toml
 roots = ["~/codigo/pessoal", "~/codigo/tabeladev"]
@@ -129,54 +130,54 @@ description_files = ["README.md", "PLANNING.md", "ESCOPO.md", "STACK.md", "TODO.
 claude_projects_dir = "~/.claude/projects"
 
 [layout]
-sidebar_width_share = 1  # razão de LARGURA sidebar:coluna-direita
+sidebar_width_share = 1  # WIDTH ratio sidebar:right-column
 right_width_share   = 4
-stats_height_share  = 1  # razão de ALTURA stats:descrição
+stats_height_share  = 1  # HEIGHT ratio stats:description
 desc_height_share   = 4
 
 [general]
-editor = "nvim"  # vazio = usa $EDITOR, depois nvim
+editor = "nvim"  # empty = use $EDITOR, then nvim
 ```
 
-### Quais repos monitorar
+### Which repos to watch
 
-`roots` aceita dois tipos de caminho:
+`roots` accepts two kinds of path:
 
-- uma pasta-de-repos: cada subpasta com `.git` vira uma linha na tabela (é
-  como `~/codigo/pessoal` funciona);
-- um repositório git direto: entra sozinho, como uma linha só (útil pra um
-  repo solto fora das pastas padrão).
+- a folder-of-repos: every subfolder with a `.git` becomes a row in the table
+  (this is how `~/codigo/pessoal` works);
+- a git repository directly: it enters on its own, as a single row (useful for a
+  loose repo outside the usual folders).
 
-`exclude` esconde um caminho específico — seja uma raiz inteira, seja um filho
-de uma raiz citada em `roots`. A ordem não importa entre as duas listas.
+`exclude` hides a specific path — whether a whole root or a child of a root listed
+in `roots`. Order does not matter between the two lists.
 
-Sem nenhum arquivo, varre só `TABELARADAR_ROOT` (ou `~/codigo/pessoal`).
+With no file at all, it scans only `TABELARADAR_ROOT` (or `~/codigo/pessoal`).
 
-### Migrando do formato antigo
+### Migrating from the old format
 
-Antes da 0.3.0 a config era `~/.config/tabelaradar/config`, uma entrada por
-linha com `!` prefixando exclusões. **Esse arquivo continua sendo lido** quando
-não existe `config.toml`, com um aviso na barra de status. A tradução é direta:
+Before 0.3.0 the config was `~/.config/tabelaradar/config`, one entry per line with
+`!` prefixing exclusions. **That file is still read** when no `config.toml` exists,
+with a warning on the status bar. The translation is direct:
 
 ```
 ~/codigo/pessoal              →  roots   = ["~/codigo/pessoal"]
 !~/codigo/pessoal/spotdash    →  exclude = ["~/codigo/pessoal/spotdash"]
 ```
 
-Criado o `config.toml`, ele passa a valer sozinho — os dois formatos não se
-misturam, e o arquivo antigo pode ser apagado.
+Once `config.toml` exists, it takes over on its own — the two formats do not mix,
+and the old file can be deleted.
 
-### Outras variáveis
+### Other variables
 
-- `TABELARADAR_CONFIG` — caminho do `config.toml`, se não for o padrão.
-- `TABELARADAR_ROOT` — diretório varrido quando não existe config nenhuma
-  (padrão `~/codigo/pessoal`).
-- `TABELARADAR_ACCENT` — accent Catppuccin Mocha manual, usado só quando o
-  DankMaterialShell não está instalado/configurado (padrão `mauve`).
-- `TABELARADAR_DMS_SETTINGS` — caminho do `settings.json` do DMS, se não for
-  o padrão.
+- `TABELARADAR_CONFIG` — path to `config.toml`, when it is not the default.
+- `TABELARADAR_ROOT` — the directory scanned when no config exists at all
+  (`~/codigo/pessoal` by default).
+- `TABELARADAR_ACCENT` — a manual Catppuccin Mocha accent, used only when
+  DankMaterialShell is not installed or configured (`mauve` by default).
+- `TABELARADAR_DMS_SETTINGS` — path to the DMS `settings.json`, when it is not the
+  default.
 
-## Desenvolvimento
+## Development
 
 ```bash
 go test ./...
@@ -184,16 +185,16 @@ go test ./...
 
 ## Changelog
 
-Veja [CHANGELOG.md](CHANGELOG.md) para o histórico de versões.
+See [CHANGELOG.md](CHANGELOG.md) for the version history.
 
-## Apoie o projeto
+## Support the project
 
 - **Global**: [ko-fi.com/ianptkcs](https://ko-fi.com/ianptkcs)
-- **Brasil (Pix)**: escaneie o QR abaixo ou copie o código
+- **Brazil (Pix)**: scan the QR below or copy the code
 
   <img src="pix-qr.png" alt="Pix QR" width="200" />
 
-  <details><summary>Código Pix (copiar)</summary>
+  <details><summary>Pix code (copy)</summary>
 
   ```
   00020126580014BR.GOV.BCB.PIX01365ad933b0-dcdc-4525-a736-0759902aeec65204000053039865802BR5925Ian Patrick da Costa Soar6009SAO PAULO62140510tQA85x6Dov63041FB6
@@ -201,8 +202,8 @@ Veja [CHANGELOG.md](CHANGELOG.md) para o histórico de versões.
 
   </details>
 
-## Licença
+## License
 
-[GNU AGPL-3.0](LICENSE) — livre e open source. Se você rodar uma versão
-modificada deste projeto, inclusive como serviço de rede, também precisa
-disponibilizar o código-fonte modificado sob a mesma licença.
+[GNU AGPL-3.0](LICENSE) — free and open source. If you run a modified version of
+this project, including as a network service, you also have to make the modified
+source available under the same license.
