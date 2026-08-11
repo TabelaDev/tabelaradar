@@ -16,7 +16,6 @@ func configDir(t *testing.T) string {
 	t.Setenv("XDG_CONFIG_HOME", base)
 	t.Setenv("TABELARADAR_CONFIG", "")
 	t.Setenv("TABELARADAR_ROOT", "")
-	cfg = nil
 	settings = defaultConfig()
 
 	dir := filepath.Join(base, "tabelaradar")

@@ -86,8 +86,6 @@ func legacyConfigPath() string {
 	return tuiui.ConfigPath("tabelaradar", "config")
 }
 
-var cfg *tuiui.Config[config]
-
 // settings is the normalized snapshot the app reads from.
 var settings = defaultConfig()
 
@@ -123,24 +121,28 @@ func normalize(c config) config {
 // refreshSettings re-reads config.toml from disk and returns a warning string
 // (never an error) — a bad config file must not stop the scan, same contract
 // the old line-based loader had.
+// The Config is built per call rather than kept in a package var: both the
+// path (TABELARADAR_CONFIG) and the defaults (TABELARADAR_ROOT) come from the
+// environment, and a cached instance would freeze whatever they were on the
+// first call. Nothing is lost — this app re-reads on every rescan anyway and
+// never consults Reload's "changed" flag.
 func refreshSettings() string {
-	if cfg == nil {
-		cfg = tuiui.NewConfig(configPath(), defaultConfig())
-	}
+	path := configPath()
 
 	// No config.toml yet: fall back to the pre-TOML file if it's still there,
 	// so an existing install keeps its roots after upgrading.
-	if _, err := os.Stat(configPath()); os.IsNotExist(err) {
+	if _, err := os.Stat(path); os.IsNotExist(err) {
 		if legacy, ok := loadLegacyConfig(); ok {
 			settings = normalize(legacy)
-			return fmt.Sprintf("lendo o config antigo %s — migre pra %s", legacyConfigPath(), configPath())
+			return fmt.Sprintf("lendo o config antigo %s — migre pra %s", legacyConfigPath(), path)
 		}
 	}
 
-	_, err := cfg.Reload()
+	cfg := tuiui.NewConfig(path, defaultConfig())
+	err := cfg.Load()
 	settings = normalize(cfg.Get())
 	if err != nil {
-		return fmt.Sprintf("erro lendo %s: %v", configPath(), err)
+		return fmt.Sprintf("erro lendo %s: %v", path, err)
 	}
 	return ""
 }
