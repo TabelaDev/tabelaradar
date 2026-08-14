@@ -29,7 +29,7 @@ func enabledSources(cfg digestSources) []activitySource {
 		out = append(out, claudeMemorySource{})
 	}
 	if cfg.OpencodeSessions {
-		out = append(out, opencodeSessionsSource{max: 200})
+		out = append(out, &opencodeSessionsSource{max: 200})
 	}
 	return out
 }
@@ -90,49 +90,71 @@ func (claudeMemorySource) Gather(_ context.Context, p Project, _ time.Time) ([]s
 // (`opencode session list --format json`), which already carries each
 // session's working directory and updated time — no direct sqlite access,
 // no dependency on opencode's internal schema. Off by default.
+//
+// The session list is fetched once (lazily, on the first Gather) and reused
+// for every project, so a board with N projects costs one CLI call, not N.
 type opencodeSessionsSource struct {
 	max int
+
+	fetched bool
+	entries []opencodeSession
 }
 
-func (s opencodeSessionsSource) Name() string { return "opencode-sessions" }
+type opencodeSession struct {
+	Title     string `json:"title"`
+	Updated   int64  `json:"updated"` // milliseconds since epoch
+	Directory string `json:"directory"`
+}
 
-func (s opencodeSessionsSource) Gather(ctx context.Context, p Project, windowStart time.Time) ([]string, error) {
-	bin := "opencode"
-	if _, err := exec.LookPath(bin); err != nil {
-		return nil, nil // no opencode on PATH: nothing to gather, not an error
-	}
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
-	defer cancel()
-	cmd := exec.CommandContext(ctx, bin, "session", "list", "--format", "json", "-n", strconv.Itoa(s.max))
-	out, err := cmd.Output()
-	if err != nil {
-		return nil, fmt.Errorf("opencode session list: %v", err)
-	}
+func (s *opencodeSessionsSource) Name() string { return "opencode-sessions" }
 
-	var sessions []struct {
-		Title     string `json:"title"`
-		Updated   int64  `json:"updated"` // milliseconds since epoch
-		Directory string `json:"directory"`
-	}
-	if err := json.Unmarshal(out, &sessions); err != nil {
-		return nil, fmt.Errorf("opencode session list: json: %v", err)
+func (s *opencodeSessionsSource) Gather(ctx context.Context, p Project, windowStart time.Time) ([]string, error) {
+	if !s.fetched {
+		entries, err := fetchOpencodeSessions(ctx, s.max)
+		if err != nil {
+			return nil, err
+		}
+		s.entries = entries
+		s.fetched = true
 	}
 
 	sinceMs := windowStart.UnixMilli()
 	var lines []string
-	for _, s := range sessions {
-		if s.Directory != p.Path || s.Updated < sinceMs {
+	for _, e := range s.entries {
+		if e.Directory != p.Path || e.Updated < sinceMs {
 			continue
 		}
 		when := ""
-		if s.Updated > 0 {
-			when = " · " + humanizeAgo(time.UnixMilli(s.Updated))
+		if e.Updated > 0 {
+			when = " · " + humanizeAgo(time.UnixMilli(e.Updated))
 		}
-		title := strings.TrimSpace(s.Title)
+		title := strings.TrimSpace(e.Title)
 		if title == "" {
 			title = "(sessão sem título)"
 		}
 		lines = append(lines, "sessão: "+title+when)
 	}
 	return lines, nil
+}
+
+// fetchOpencodeSessions runs `opencode session list --format json -n <max>`.
+// No opencode on PATH is not an error — it just yields nothing.
+func fetchOpencodeSessions(ctx context.Context, max int) ([]opencodeSession, error) {
+	bin := "opencode"
+	if _, err := exec.LookPath(bin); err != nil {
+		return nil, nil
+	}
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, bin, "session", "list", "--format", "json", "-n", strconv.Itoa(max))
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("opencode session list: %v", err)
+	}
+
+	var sessions []opencodeSession
+	if err := json.Unmarshal(out, &sessions); err != nil {
+		return nil, fmt.Errorf("opencode session list: json: %v", err)
+	}
+	return sessions, nil
 }
