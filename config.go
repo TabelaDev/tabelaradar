@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/ianptkcs/tabelatuiui"
 )
@@ -30,6 +31,11 @@ type config struct {
 	Scanner scannerConfig `toml:"scanner"`
 	Layout  layoutConfig  `toml:"layout"`
 	General generalConfig `toml:"general"`
+	// Digest gates the `digest` subcommand — the AI that turns gathered
+	// activity into kanban updates. Everything about it is configurable and
+	// it is off by default: no provider, no board mapping, no AI until the
+	// user explicitly opts in.
+	Digest digestConfig `toml:"digest"`
 }
 
 type scannerConfig struct {
@@ -54,6 +60,104 @@ type generalConfig struct {
 	Editor string `toml:"editor"`
 }
 
+// digestConfig is the whole `[digest]` section. Enabled defaults to false on
+// purpose — the digest only runs (and only calls any LLM) once the user turns
+// it on and maps at least one board.
+type digestConfig struct {
+	// Enabled turns the AI update on. With it off (the default), `digest`
+	// still gathers activity and prints what it would do — but without
+	// applying anything and without calling any LLM.
+	Enabled bool `toml:"enabled"`
+	// DryRun prints the planned kanban changes instead of applying them. It
+	// does not bypass the LLM: the digest still asks it to propose moves, it
+	// just refuses to write. With Enabled off, DryRun is forced on.
+	DryRun bool `toml:"dry_run"`
+	// StateFile is where the digest keeps its cursor — the last successful
+	// run time, so the next run only gathers what happened since.
+	StateFile string `toml:"state_file"`
+	// KanbanBin is the tabelakanban binary the digest drives. Empty = look it
+	// up on $PATH.
+	KanbanBin string         `toml:"kanban_bin"`
+	LLM       llmConfig      `toml:"llm"`
+	Sources   digestSources  `toml:"sources"`
+	Boards    []digestBoard  `toml:"boards"`
+	Schedule  scheduleConfig `toml:"schedule"`
+}
+
+// llmConfig decides how and whether an AI runs. Provider picks the backend;
+// the rest tune it. API keys are read from the environment (never the file).
+type llmConfig struct {
+	// Provider is one of: opencode, claude (local CLIs), deepseek, openai,
+	// anthropic (HTTP APIs). Empty means no AI at all.
+	Provider string `toml:"provider"`
+	// Model overrides the provider default. Only the HTTP providers need it
+	// (and even they fall back to a sane default when empty).
+	Model string `toml:"model"`
+	// BaseURL overrides the endpoint, for OpenAI-compatible gateways.
+	BaseURL string `toml:"base_url"`
+	// APIKeyEnv names the env var holding the key. Defaults to the
+	// provider's own convention (DEEPSEEK_API_KEY, OPENAI_API_KEY,
+	// ANTHROPIC_API_KEY) when empty.
+	APIKeyEnv string `toml:"api_key_env"`
+	// CLI overrides the binary for the local-CLI providers (opencode/claude).
+	// Empty = look it up on $PATH.
+	CLI string `toml:"cli"`
+	// Timeout bounds a single LLM call.
+	Timeout duration `toml:"timeout"`
+	// MaxTokens caps the completion; 0 = provider default.
+	MaxTokens int `toml:"max_tokens"`
+	// Temperature for the completion; 0 = deterministic-ish, 1 = spicy.
+	Temperature float64 `toml:"temperature"`
+}
+
+// digestSources picks which activity feeds the digest, per source. This is
+// the "how and whether an AI runs" dial: a source off is simply never
+// gathered, a source on is gathered and handed to the LLM.
+type digestSources struct {
+	// Git: commits since the last run plus the current repo state the scanner
+	// already reads (dirty, ahead/behind, branch, last commit).
+	Git bool `toml:"git"`
+	// ClaudeMemory: the MEMORY.md index + next-steps body the scanner already
+	// reads for each project.
+	ClaudeMemory bool `toml:"claude_memory"`
+	// OpencodeSessions: recent opencode session transcripts, read directly
+	// from the opencode sqlite store (read-only). Off by default — the store
+	// is big and its schema is opencode's, not ours.
+	OpencodeSessions bool `toml:"opencode_sessions"`
+	// Since is the fallback window on the very first run, when there is no
+	// state file yet (e.g. "24h", "7d").
+	Since string `toml:"since"`
+}
+
+// digestBoard maps one kanban board to the radar projects that feed it. Board
+// matches the kanban board name (as `tabelakanban ipc boards.list` reports
+// it); Projects are Project.Name values (the repo basenames the radar scans).
+// The mapping is the radar's own — nothing new lives inside the kanban.
+type digestBoard struct {
+	Board    string   `toml:"board"`
+	Projects []string `toml:"projects"`
+}
+
+// scheduleConfig feeds `digest --install-timer`: the systemd user timer that
+// runs the digest on a schedule. Nothing is installed unless asked.
+type scheduleConfig struct {
+	OnCalendar string `toml:"on_calendar"`
+	Persistent bool   `toml:"persistent"`
+}
+
+// duration wraps time.Duration so TOML can express it as "2s" instead of a
+// raw nanosecond count.
+type duration struct{ time.Duration }
+
+func (d *duration) UnmarshalText(text []byte) error {
+	parsed, err := time.ParseDuration(string(text))
+	if err != nil {
+		return err
+	}
+	d.Duration = parsed
+	return nil
+}
+
 func defaultConfig() config {
 	return config{
 		Roots:   []string{tuiui.EnvOr("TABELARADAR_ROOT", filepath.Join(tuiui.HomeDir(), "codigo", "pessoal"))},
@@ -69,6 +173,22 @@ func defaultConfig() config {
 			DescHeightShare:   4,
 		},
 		General: generalConfig{Editor: ""}, // empty = fall back to $EDITOR, then nvim
+		Digest: digestConfig{
+			StateFile: filepath.Join(tuiui.HomeDir(), ".local", "state", "tabelaradar", "digest.json"),
+			KanbanBin: "tabelakanban",
+			LLM: llmConfig{
+				Provider:    "opencode", // the local CLI; the zero-extra-setup default
+				Timeout:     duration{120 * time.Second},
+				Temperature: 0.2,
+			},
+			Sources: digestSources{
+				Git:              true,
+				ClaudeMemory:     true,
+				OpencodeSessions: false, // big store + opencode's own schema: opt-in
+				Since:            "24h",
+			},
+			Schedule: scheduleConfig{OnCalendar: "*-*-* 09:00:00", Persistent: true},
+		},
 	}
 }
 
@@ -114,6 +234,32 @@ func normalize(c config) config {
 	c.Scanner.ClaudeProjectsDir = tuiui.ExpandHome(c.Scanner.ClaudeProjectsDir)
 	if len(c.Roots) == 0 {
 		c.Roots = d.Roots
+	}
+	if c.Digest.StateFile == "" {
+		c.Digest.StateFile = d.Digest.StateFile
+	}
+	c.Digest.StateFile = tuiui.ExpandHome(c.Digest.StateFile)
+	if c.Digest.LLM.Provider == "" {
+		c.Digest.LLM.Provider = d.Digest.LLM.Provider
+	}
+	if c.Digest.LLM.APIKeyEnv == "" {
+		switch c.Digest.LLM.Provider {
+		case "deepseek":
+			c.Digest.LLM.APIKeyEnv = "DEEPSEEK_API_KEY"
+		case "openai":
+			c.Digest.LLM.APIKeyEnv = "OPENAI_API_KEY"
+		case "anthropic":
+			c.Digest.LLM.APIKeyEnv = "ANTHROPIC_API_KEY"
+		}
+	}
+	if c.Digest.LLM.Timeout.Duration <= 0 {
+		c.Digest.LLM.Timeout = d.Digest.LLM.Timeout
+	}
+	if c.Digest.Sources.Since == "" {
+		c.Digest.Sources.Since = d.Digest.Sources.Since
+	}
+	if c.Digest.Schedule.OnCalendar == "" {
+		c.Digest.Schedule.OnCalendar = d.Digest.Schedule.OnCalendar
 	}
 	return c
 }

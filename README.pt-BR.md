@@ -45,6 +45,7 @@ compartilhada dos meus TUIs Bubble Tea.
 - [Layout](#layout)
 - [Uso](#uso)
 - [IPC](#ipc)
+- [Digest](#digest)
 - [Configuração](#configuração)
 - [Licença](#licença)
 
@@ -86,6 +87,7 @@ Três painéis:
 ```
 tabelaradar         # abre a TUI
 tabelaradar list    # dump em texto plano, sem TTY — útil pra scriptar
+tabelaradar digest  # vira atividade recente em updates no kanban (precisa de [digest] no config)
 ```
 
 Dentro da TUI: `↑`/`↓` (ou `j`/`k`) navegam a lista de projetos,
@@ -116,6 +118,60 @@ memória daquele projeto marcada `type: next-steps` na sua própria
 `~/.claude/projects/<slug>/memory/` — vazio se o projeto ainda não tiver
 uma.
 
+## Digest
+
+`tabelaradar digest` vira atividade recente dos projetos em updates no kanban —
+o "pra quê" do radar. Ele coleta a atividade dos projetos mapeados, pede a um
+LLM um plano estruturado e aplica no kanban via IPC. Nada mora dentro do
+kanban: o mapeamento board→projetos é config do próprio radar.
+
+Fluxo por rodada:
+
+1. coleta atividade de cada projeto dos `[digest.boards]` desde a última
+   rodada — commits + estado do git, o índice de memória do Claude e
+   (opcional, off por default) sessões recentes do opencode via
+   `opencode session list`;
+2. lê o estado atual do board com `tabelakanban ipc boards.list`;
+3. pede ao LLM configurado um plano: `{"moves":[...],"updates":[...],"creates":[...]}`;
+4. aplica com `tabelakanban ipc cards.move` / `cards.update` / `cards.create`
+   (ou só imprime com `--dry-run` / `dry_run = true`).
+
+```bash
+tabelaradar digest                 # aplica (precisa de [digest] com enabled = true)
+tabelaradar digest --dry-run       # imprime o plano, não muda nada
+tabelaradar digest --install-timer # timer systemd de usuário a partir de [digest].schedule
+```
+
+O cursor mora em `state_file` (`~/.local/state/tabelaradar/digest.json` por
+default) e só avança numa rodada real, não-dry — assim um preview nunca engole
+atividade. Requer `tabelakanban` ≥ v0.3.0 (o método `ipc cards.update`).
+
+Um `[digest]` mínimo:
+
+```toml
+[digest]
+enabled = true
+
+[digest.llm]
+provider = "opencode"   # opencode | claude | deepseek | openai | anthropic
+
+[digest.sources]
+git = true
+claude_memory = true
+
+[[digest.boards]]
+board = "geral"
+projects = ["tabelacal", "tabelafin"]
+
+[digest.schedule]       # usado por `digest --install-timer`
+on_calendar = "*-*-* 09:00:00"
+```
+
+Tudo é um dial: `enabled` decide se roda IA ou não, `dry_run` se ela escreve,
+`[digest.llm]` como, `[digest.sources]` o que ela enxerga e `[[digest.boards]]`
+quais boards alimentam quais projetos. Com `enabled` off, o digest ainda coleta
+e imprime a atividade, mas nunca chama LLM e nunca escreve nada.
+
 ## Configuração
 
 Tudo fica em `~/.config/tabelaradar/config.toml` (sobrescrível via
@@ -138,6 +194,34 @@ desc_height_share   = 4
 
 [general]
 editor = "nvim"  # vazio = usa $EDITOR, depois nvim
+
+# As chaves do digest são todas opcionais; o quadro completo está na seção Digest.
+[digest]
+enabled = false    # IA atualizando o kanban — opt-in
+dry_run = false    # true = imprime o plano, não escreve nada
+
+[digest.llm]
+provider = "opencode"  # opencode | claude | deepseek | openai | anthropic
+# model = "..."        # só providers HTTP (default de cada um quando vazio)
+# base_url = ""        # override pra gateways compatíveis com OpenAI
+# api_key_env = ""     # DEEPSEEK_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY
+# timeout = "120s"
+# max_tokens = 0       # 0 = default do provider
+# temperature = 0.2
+
+[digest.sources]
+git               = true   # commits desde a última rodada + estado atual
+claude_memory     = true   # índice MEMORY.md + next-steps
+opencode_sessions = false  # sessões recentes do opencode (via CLI do opencode)
+# since = "24h"            # janela na primeira rodada, antes de existir state file
+
+[[digest.boards]]          # repita pra cada board
+board = "geral"
+projects = ["tabelacal", "tabelafin"]
+
+[digest.schedule]          # usado por `digest --install-timer`
+on_calendar = "*-*-* 09:00:00"
+persistent  = true
 ```
 
 ### Quais repos monitorar

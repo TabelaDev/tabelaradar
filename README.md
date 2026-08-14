@@ -44,6 +44,7 @@ of my Bubble Tea TUIs.
 - [Layout](#layout)
 - [Usage](#usage)
 - [IPC](#ipc)
+- [Digest](#digest)
 - [Configuration](#configuration)
 - [License](#license)
 
@@ -85,6 +86,7 @@ Three panels:
 ```
 tabelaradar         # opens the TUI
 tabelaradar list    # plain-text dump, no TTY — useful for scripting
+tabelaradar digest  # turn recent activity into kanban updates (needs [digest] config)
 ```
 
 Inside the TUI: `↑`/`↓` (or `j`/`k`) move through the project list,
@@ -114,6 +116,60 @@ project in the JSON carries `description` (extracted from README/PLANNING/etc.),
 `type: next-steps` in its own `~/.claude/projects/<slug>/memory/`, empty when the
 project does not have one yet.
 
+## Digest
+
+`tabelaradar digest` turns recent project activity into kanban updates — the
+radar's "why". It gathers activity from the mapped projects, asks an LLM for a
+structured plan and applies it to the kanban through its IPC. Nothing lives
+inside the kanban: the board→projects mapping is the radar's own config.
+
+Flow per run:
+
+1. gather activity for each `[digest.boards]` project since the last run —
+   git commits + current state, the Claude memory index, and (optional, off by
+   default) recent opencode sessions via `opencode session list`;
+2. read the current board state with `tabelakanban ipc boards.list`;
+3. ask the configured LLM for a plan: `{"moves":[...],"updates":[...],"creates":[...]}`;
+4. apply it with `tabelakanban ipc cards.move` / `cards.update` / `cards.create`
+   (or just print it with `--dry-run` / `dry_run = true`).
+
+```bash
+tabelaradar digest               # apply (requires [digest] with enabled = true)
+tabelaradar digest --dry-run     # print the plan, change nothing
+tabelaradar digest --install-timer  # systemd user timer from [digest].schedule
+```
+
+The cursor lives in `state_file` (`~/.local/state/tabelaradar/digest.json` by
+default) and only advances on a real, non-dry run, so a preview never swallows
+activity. Requires `tabelakanban` ≥ v0.3.0 (the `ipc cards.update` method).
+
+A minimal `[digest]` setup:
+
+```toml
+[digest]
+enabled = true
+
+[digest.llm]
+provider = "opencode"   # opencode | claude | deepseek | openai | anthropic
+
+[digest.sources]
+git = true
+claude_memory = true
+
+[[digest.boards]]
+board = "geral"
+projects = ["tabelacal", "tabelafin"]
+
+[digest.schedule]       # used by `digest --install-timer`
+on_calendar = "*-*-* 09:00:00"
+```
+
+Everything is a dial: `enabled` decides whether an AI runs at all, `dry_run`
+whether it writes, `[digest.llm]` how, `[digest.sources]` what it sees, and
+`[[digest.boards]]` which boards feed which projects. With `enabled` off the
+digest still gathers and prints activity, but never calls an LLM and never
+writes a thing.
+
 ## Configuration
 
 Everything lives in `~/.config/tabelaradar/config.toml` (overridable through
@@ -137,6 +193,34 @@ desc_height_share   = 4
 
 [general]
 editor = "nvim"  # empty = use $EDITOR, then nvim
+
+# All the digest keys are optional; see the Digest section for the full picture.
+[digest]
+enabled = false    # AI updating the kanban — opt-in
+dry_run = false    # true = print the plan, write nothing
+
+[digest.llm]
+provider = "opencode"  # opencode | claude | deepseek | openai | anthropic
+# model = "..."        # HTTP providers only (provider defaults when empty)
+# base_url = ""        # override for OpenAI-compatible gateways
+# api_key_env = ""     # DEEPSEEK_API_KEY / OPENAI_API_KEY / ANTHROPIC_API_KEY
+# timeout = "120s"
+# max_tokens = 0       # 0 = provider default
+# temperature = 0.2
+
+[digest.sources]
+git               = true   # commits since last run + current state
+claude_memory     = true   # MEMORY.md index + next-steps
+opencode_sessions = false  # recent opencode sessions (read via the opencode CLI)
+# since = "24h"            # window on the first run, before a state file exists
+
+[[digest.boards]]          # repeat for each board
+board = "geral"
+projects = ["tabelacal", "tabelafin"]
+
+[digest.schedule]          # used by `digest --install-timer`
+on_calendar = "*-*-* 09:00:00"
+persistent  = true
 ```
 
 ### Which repos to watch

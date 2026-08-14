@@ -14,6 +14,8 @@ func main() {
 			os.Exit(runList())
 		case "ipc":
 			os.Exit(runIPC(os.Args[2:]))
+		case "digest":
+			os.Exit(runDigest(os.Args[2:]))
 		}
 	}
 

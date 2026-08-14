@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 )
 
 // configDir points XDG_CONFIG_HOME at a temp dir and returns
@@ -171,5 +172,112 @@ func TestExpandHomeAppliedToRoots(t *testing.T) {
 	roots, _ := paths(entries)
 	if len(roots) != 1 || strings.HasPrefix(roots[0], "~") {
 		t.Fatalf("roots = %v, want the ~ expanded", roots)
+	}
+}
+
+func TestDigestConfigParsesSection(t *testing.T) {
+	dir := configDir(t)
+	write(t, filepath.Join(dir, "config.toml"), `
+roots = ["/tmp/tabeladev"]
+
+[digest]
+enabled = true
+dry_run = true
+kanban_bin = "/tmp/tkb"
+state_file = "~/estado/digest.json"
+
+[digest.llm]
+provider = "deepseek"
+model = "deepseek-chat"
+api_key_env = "MY_KEY"
+timeout = "30s"
+max_tokens = 400
+temperature = 0.5
+
+[digest.sources]
+git = false
+claude_memory = false
+opencode_sessions = true
+since = "7d"
+
+[[digest.boards]]
+board = "geral"
+projects = ["tabelafin", "tabelawebui"]
+
+[[digest.boards]]
+board = "wiv"
+projects = ["blip-plugins"]
+
+[digest.schedule]
+on_calendar = "*-*-* 08:00:00"
+persistent = false
+`)
+	if _, warn := loadRootsConfig(); warn != "" {
+		t.Fatalf("warning = %q, want none", warn)
+	}
+
+	d := settings.Digest
+	if !d.Enabled || !d.DryRun {
+		t.Fatalf("enabled/dry_run = %v/%v, want true/true", d.Enabled, d.DryRun)
+	}
+	if d.KanbanBin != "/tmp/tkb" {
+		t.Fatalf("kanban_bin = %q, want /tmp/tkb", d.KanbanBin)
+	}
+	if strings.HasPrefix(d.StateFile, "~") {
+		t.Fatalf("state_file not expanded: %q", d.StateFile)
+	}
+	if d.LLM.Provider != "deepseek" || d.LLM.Model != "deepseek-chat" || d.LLM.APIKeyEnv != "MY_KEY" {
+		t.Fatalf("llm = %+v, want deepseek/deepseek-chat/MY_KEY", d.LLM)
+	}
+	if d.LLM.Timeout.Duration != 30*time.Second {
+		t.Fatalf("llm timeout = %v, want 30s", d.LLM.Timeout.Duration)
+	}
+	if d.LLM.MaxTokens != 400 || d.LLM.Temperature != 0.5 {
+		t.Fatalf("llm max_tokens/temperature = %d/%v", d.LLM.MaxTokens, d.LLM.Temperature)
+	}
+	if d.Sources.Git || d.Sources.ClaudeMemory || !d.Sources.OpencodeSessions || d.Sources.Since != "7d" {
+		t.Fatalf("sources = %+v, want only opencode_sessions + since 7d", d.Sources)
+	}
+	if len(d.Boards) != 2 || d.Boards[0].Board != "geral" || len(d.Boards[0].Projects) != 2 {
+		t.Fatalf("boards = %+v, want geral com 2 projetos", d.Boards)
+	}
+	if d.Boards[1].Board != "wiv" || len(d.Boards[1].Projects) != 1 {
+		t.Fatalf("boards[1] = %+v, want wiv com 1 projeto", d.Boards[1])
+	}
+	if d.Schedule.OnCalendar != "*-*-* 08:00:00" || d.Schedule.Persistent {
+		t.Fatalf("schedule = %+v, want 08:00 + non-persistent", d.Schedule)
+	}
+}
+
+func TestDigestConfigDefaults(t *testing.T) {
+	configDir(t)
+	if _, warn := loadRootsConfig(); warn != "" {
+		t.Fatalf("warning = %q, want none", warn)
+	}
+	d := settings.Digest
+	if d.Enabled || d.DryRun {
+		t.Fatalf("digest should default to disabled, got %+v", d)
+	}
+	if d.LLM.Provider != "opencode" {
+		t.Fatalf("default provider = %q, want opencode", d.LLM.Provider)
+	}
+	if !d.Sources.Git || !d.Sources.ClaudeMemory || d.Sources.OpencodeSessions {
+		t.Fatalf("default sources = %+v, want git+memory on, sessions off", d.Sources)
+	}
+	if d.LLM.APIKeyEnv != "" {
+		t.Fatalf("default api_key_env = %q, want empty (fallback per provider)", d.LLM.APIKeyEnv)
+	}
+}
+
+func TestDigestAPIKeyEnvFallsBackPerProvider(t *testing.T) {
+	dir := configDir(t)
+	write(t, filepath.Join(dir, "config.toml"), `[digest.llm]
+provider = "anthropic"
+`)
+	if _, warn := loadRootsConfig(); warn != "" {
+		t.Fatalf("warning = %q, want none", warn)
+	}
+	if settings.Digest.LLM.APIKeyEnv != "ANTHROPIC_API_KEY" {
+		t.Fatalf("api_key_env = %q, want ANTHROPIC_API_KEY", settings.Digest.LLM.APIKeyEnv)
 	}
 }
