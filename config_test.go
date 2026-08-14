@@ -185,6 +185,8 @@ enabled = true
 dry_run = true
 kanban_bin = "/tmp/tkb"
 state_file = "~/estado/digest.json"
+wait_for_network = false
+network_timeout = "2m"
 
 [digest.llm]
 provider = "deepseek"
@@ -226,6 +228,9 @@ persistent = false
 	if strings.HasPrefix(d.StateFile, "~") {
 		t.Fatalf("state_file not expanded: %q", d.StateFile)
 	}
+	if d.WaitForNetwork || d.NetworkTimeout.Duration != 2*time.Minute {
+		t.Fatalf("wait_for_network/network_timeout = %v/%v, want false/2m", d.WaitForNetwork, d.NetworkTimeout.Duration)
+	}
 	if d.LLM.Provider != "deepseek" || d.LLM.Model != "deepseek-chat" || d.LLM.APIKeyEnv != "MY_KEY" {
 		t.Fatalf("llm = %+v, want deepseek/deepseek-chat/MY_KEY", d.LLM)
 	}
@@ -266,6 +271,12 @@ func TestDigestConfigDefaults(t *testing.T) {
 	}
 	if d.LLM.APIKeyEnv != "" {
 		t.Fatalf("default api_key_env = %q, want empty (fallback per provider)", d.LLM.APIKeyEnv)
+	}
+	if !d.WaitForNetwork || d.NetworkTimeout.Duration != 5*time.Minute {
+		t.Fatalf("default wait/network = %v/%v, want true/5m", d.WaitForNetwork, d.NetworkTimeout.Duration)
+	}
+	if d.Schedule.OnCalendar != "*-*-* 19:00:00" || !d.Schedule.Persistent {
+		t.Fatalf("default schedule = %+v, want end-of-day persistent", d.Schedule)
 	}
 }
 

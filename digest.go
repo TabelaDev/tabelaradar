@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -71,19 +72,17 @@ type digestState struct {
 //
 //	--install-timer  write + enable the systemd user timer (from [digest].schedule)
 //	--dry-run        force dry-run (never apply, never touch the state file)
+//	--no-wait        skip the wait-for-network probe (overrides wait_for_network)
 func runDigest(args []string) int {
+	forceDryRun, noWait := false, false
 	for _, a := range args {
 		switch a {
 		case "--install-timer":
 			return installDigestTimer()
 		case "--dry-run":
-			// handled below via a forced flag
-		}
-	}
-	forceDryRun := false
-	for _, a := range args {
-		if a == "--dry-run" {
 			forceDryRun = true
+		case "--no-wait":
+			noWait = true
 		}
 	}
 
@@ -97,6 +96,17 @@ func runDigest(args []string) int {
 	}
 
 	cfg := settings.Digest
+	// A Persistent timer fires the moment the machine is back — often before
+	// the network is up. Wait for connectivity before doing anything network-
+	// bound; on timeout, abort cleanly so the cursor doesn't advance and the
+	// next timer run retries.
+	if cfg.WaitForNetwork && !noWait {
+		if err := waitForNetwork(cfg.NetworkTimeout.Duration); err != nil {
+			fmt.Fprintln(os.Stderr, "erro:", err)
+			return 1
+		}
+	}
+
 	dryRun := cfg.DryRun || forceDryRun || !cfg.Enabled
 	llm, err := newLLM(cfg.LLM)
 	if err != nil {
@@ -461,6 +471,28 @@ func parseSince(s string) time.Time {
 }
 
 func ctx() context.Context { return context.Background() }
+
+// waitForNetwork probes github.com until a connection succeeds or the timeout
+// expires — the same guard the user's cron jobs use (wait_for_net), in-process
+// so the timer's ExecStart stays a single `tabelaradar digest` call.
+func waitForNetwork(timeout time.Duration) error {
+	if timeout <= 0 {
+		timeout = 5 * time.Minute
+	}
+	deadline := time.Now().Add(timeout)
+	client := &http.Client{Timeout: 5 * time.Second}
+	for time.Now().Before(deadline) {
+		resp, err := client.Get("https://github.com")
+		if err == nil {
+			resp.Body.Close()
+			if resp.StatusCode < 500 {
+				return nil
+			}
+		}
+		time.Sleep(5 * time.Second)
+	}
+	return fmt.Errorf("sem conexão com a internet após %s, abortando (o timer vai tentar de novo)", timeout)
+}
 
 // installDigestTimer writes and enables the systemd user units that run the
 // digest on a schedule, using [digest].schedule (OnCalendar/Persistent). The

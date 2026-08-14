@@ -151,6 +151,8 @@ Um `[digest]` mínimo:
 ```toml
 [digest]
 enabled = true
+wait_for_network = true   # espera a conexão antes de rodar (default true)
+network_timeout = "5m"
 
 [digest.llm]
 provider = "opencode"   # opencode | claude | deepseek | openai | anthropic
@@ -164,8 +166,14 @@ board = "geral"
 projects = ["tabelacal", "tabelafin"]
 
 [digest.schedule]       # usado por `digest --install-timer`
-on_calendar = "*-*-* 09:00:00"
+on_calendar = "*-*-* 19:00:00"
 ```
+
+`wait_for_network` existe porque um timer `Persistent` dispara no momento em
+que a máquina volta — normalmente antes da rede subir. O digest faz um probe
+no github.com (até `network_timeout`) e, se a conexão não vier, aborta limpo
+sem avançar o cursor — o próximo timer tenta de novo. `--no-wait` pula a
+espera numa rodada manual.
 
 Tudo é um dial: `enabled` decide se roda IA ou não, `dry_run` se ela escreve,
 `[digest.llm]` como, `[digest.sources]` o que ela enxerga e `[[digest.boards]]`
@@ -199,6 +207,8 @@ editor = "nvim"  # vazio = usa $EDITOR, depois nvim
 [digest]
 enabled = false    # IA atualizando o kanban — opt-in
 dry_run = false    # true = imprime o plano, não escreve nada
+wait_for_network = true  # espera a conexão antes de rodar (default true)
+network_timeout = "5m"   # quanto esperar (default 5m)
 
 [digest.llm]
 provider = "opencode"  # opencode | claude | deepseek | openai | anthropic

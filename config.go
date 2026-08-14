@@ -77,11 +77,18 @@ type digestConfig struct {
 	StateFile string `toml:"state_file"`
 	// KanbanBin is the tabelakanban binary the digest drives. Empty = look it
 	// up on $PATH.
-	KanbanBin string         `toml:"kanban_bin"`
-	LLM       llmConfig      `toml:"llm"`
-	Sources   digestSources  `toml:"sources"`
-	Boards    []digestBoard  `toml:"boards"`
-	Schedule  scheduleConfig `toml:"schedule"`
+	KanbanBin string `toml:"kanban_bin"`
+	// WaitForNetwork blocks the start of the run until a probe to github.com
+	// succeeds. A Persistent timer fires as soon as the machine is back, which
+	// is often before the network is up — this waits (up to NetworkTimeout)
+	// and aborts cleanly if it never comes, so the cursor doesn't advance and
+	// the next timer run retries. True by default; `--no-wait` overrides.
+	WaitForNetwork bool           `toml:"wait_for_network"`
+	NetworkTimeout duration       `toml:"network_timeout"`
+	LLM            llmConfig      `toml:"llm"`
+	Sources        digestSources  `toml:"sources"`
+	Boards         []digestBoard  `toml:"boards"`
+	Schedule       scheduleConfig `toml:"schedule"`
 }
 
 // llmConfig decides how and whether an AI runs. Provider picks the backend;
@@ -174,8 +181,10 @@ func defaultConfig() config {
 		},
 		General: generalConfig{Editor: ""}, // empty = fall back to $EDITOR, then nvim
 		Digest: digestConfig{
-			StateFile: filepath.Join(tuiui.HomeDir(), ".local", "state", "tabelaradar", "digest.json"),
-			KanbanBin: "tabelakanban",
+			StateFile:      filepath.Join(tuiui.HomeDir(), ".local", "state", "tabelaradar", "digest.json"),
+			KanbanBin:      "tabelakanban",
+			WaitForNetwork: true,
+			NetworkTimeout: duration{5 * time.Minute},
 			LLM: llmConfig{
 				Provider:    "opencode", // the local CLI; the zero-extra-setup default
 				Timeout:     duration{120 * time.Second},
@@ -187,7 +196,7 @@ func defaultConfig() config {
 				OpencodeSessions: false, // big store + opencode's own schema: opt-in
 				Since:            "24h",
 			},
-			Schedule: scheduleConfig{OnCalendar: "*-*-* 09:00:00", Persistent: true},
+			Schedule: scheduleConfig{OnCalendar: "*-*-* 19:00:00", Persistent: true},
 		},
 	}
 }
@@ -254,6 +263,9 @@ func normalize(c config) config {
 	}
 	if c.Digest.LLM.Timeout.Duration <= 0 {
 		c.Digest.LLM.Timeout = d.Digest.LLM.Timeout
+	}
+	if c.Digest.NetworkTimeout.Duration <= 0 {
+		c.Digest.NetworkTimeout = d.Digest.NetworkTimeout
 	}
 	if c.Digest.Sources.Since == "" {
 		c.Digest.Sources.Since = d.Digest.Sources.Since

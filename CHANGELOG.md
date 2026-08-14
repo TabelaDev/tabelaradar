@@ -5,6 +5,26 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v0.3.2] - 2026-08-14
+
+### Adicionado
+
+- `wait_for_network` (default `true`) no `[digest]`: o digest espera a conexão
+  com a internet antes de rodar, com `network_timeout` (default 5m) — um timer
+  `Persistent` dispara assim que a máquina acorda, antes da rede subir; agora
+  ele aborta limpo se a conexão não vier (sem avançar o cursor, o próximo
+  timer tenta de novo). Flag `--no-wait` pra pular a espera.
+- Schedule default do `--install-timer` movido pra fim do dia
+  (`*-*-* 19:00:00`) — mais provável a máquina estar ligada do que de manhã.
+
+## [v0.3.1] - 2026-08-14
+
+### Alterado
+
+- O source de sessões do digest (`opencode_sessions`) memoiza a lista do
+  `opencode session list` entre os projetos do board — um board com N projetos
+  custava N chamadas de CLI, agora custa uma.
+
 ## [v0.3.0] - 2026-08-14
 
 ### Adicionado
